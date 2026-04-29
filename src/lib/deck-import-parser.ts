@@ -14,7 +14,7 @@ export type DeckImportResult = {
   detectedCommanderName: string | null;
 };
 
-const CMDR_MARKER = /\s+\*CMDR\*$/i;
+const TRAILING_MARKERS = /(\s+\*[^*]+\*)+$/g;
 const MOXFIELD_LINE_RE = /^(\d+)\s+(.+?)\s+\(([^)]+)\)\s+(\S+)$/;
 
 function isArenaFormat(text: string): boolean {
@@ -40,8 +40,8 @@ function parseMoxfieldWithCommander(text: string): DeckImportResult {
       continue;
     }
 
-    const hasCmdrMarker = CMDR_MARKER.test(raw);
-    const cleaned = hasCmdrMarker ? raw.replace(CMDR_MARKER, "").trim() : raw;
+    const hasCmdrMarker = /\*CMDR\*/i.test(raw);
+    const cleaned = raw.replace(TRAILING_MARKERS, "").trim();
 
     const m = cleaned.match(MOXFIELD_LINE_RE);
     if (!m) {

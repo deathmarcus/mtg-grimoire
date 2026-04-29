@@ -115,6 +115,36 @@ Sideboard
   });
 });
 
+describe("parseDeckImport — Moxfield foil (*F*) and other markers", () => {
+  it("parses a foil line with *F* marker", () => {
+    const input = `1 Counterspell (CMM) 630 *F*`;
+    const { rows, errors } = parseDeckImport(input);
+    expect(errors).toHaveLength(0);
+    expect(rows[0]).toMatchObject<Partial<DeckImportRow>>({
+      quantity: 1,
+      name: "Counterspell",
+      setCode: "CMM",
+      collectorNumber: "630",
+    });
+  });
+
+  it("parses a line with both *CMDR* and *F* markers", () => {
+    const input = `1 Atraxa, Praetors' Voice (ONE) 268 *CMDR* *F*`;
+    const { rows, detectedCommanderName } = parseDeckImport(input);
+    expect(rows[0].isCommander).toBe(true);
+    expect(detectedCommanderName).toBe("Atraxa, Praetors' Voice");
+    expect(rows[0].collectorNumber).toBe("268");
+  });
+
+  it("parses a mixed list with foil and non-foil", () => {
+    const input = `4 Sol Ring (CMR) 385
+1 Counterspell (CMM) 630 *F*`;
+    const { rows, errors } = parseDeckImport(input);
+    expect(errors).toHaveLength(0);
+    expect(rows).toHaveLength(2);
+  });
+});
+
 describe("parseDeckImport — edge cases", () => {
   it("returns error for empty input", () => {
     const { rows, errors } = parseDeckImport("");
