@@ -1,0 +1,128 @@
+// Diccionario español — idioma principal de la app
+const es: Record<string, string> = {
+  // Nav
+  "nav.dashboard": "Dashboard",
+  "nav.collection": "Colección",
+  "nav.folders": "Carpetas",
+  "nav.wishlist": "Lista de deseos",
+  "nav.decks": "Mazos",
+  "nav.search": "Buscar",
+  "nav.stats": "Estadísticas",
+  "nav.addCard": "Añadir carta",
+  "nav.import": "Importar",
+
+  // Dashboard
+  "page.dashboard.title": "Dashboard",
+  "page.dashboard.totalValue": "Valor total",
+  "page.dashboard.cards": "Cartas",
+  "page.dashboard.unique": "Impresiones únicas",
+  "page.dashboard.topCards": "Cartas más valiosas",
+  "page.dashboard.recentActivity": "Actividad reciente",
+  "page.dashboard.recentlyAdded": "Añadidas recientemente",
+  "page.dashboard.valueHistory": "Valor en el tiempo",
+  "page.dashboard.topMovers": "Mayores cambios",
+  "page.dashboard.myCollection": "Mi colección",
+  "page.dashboard.forSale": "En venta",
+
+  // Collection
+  "page.collection.title": "Colección",
+  "page.collection.search": "Buscar cartas...",
+  "page.collection.allFolders": "Todas",
+  "page.collection.grid": "Cuadrícula",
+  "page.collection.table": "Tabla",
+  "page.collection.empty": "No tienes cartas en esta carpeta.",
+  "page.collection.addFirst": "Añade tu primera carta",
+  "page.collection.manage": "Gestionar →",
+  "page.collection.sortName": "Nombre",
+  "page.collection.sortPrice": "Precio ↓",
+  "page.collection.sortPriceAsc": "Precio ↑",
+  "page.collection.sortRecent": "Reciente",
+
+  // Import
+  "page.import.title": "Importar colección",
+  "page.import.description": "Sube un archivo CSV de Manabox, TXT de Moxfield, o TXT de MTG Arena para añadir cartas a tu colección.",
+  "page.import.dragDrop": "Arrastra un archivo o haz clic para seleccionar",
+  "page.import.preview": "Vista previa",
+  "page.import.apply": "Aplicar importación",
+  "page.import.recentImports": "Importaciones recientes",
+  "page.import.format": "Formato",
+  "page.import.cards": "Cartas",
+  "page.import.new": "Nuevas",
+  "page.import.merged": "Combinadas",
+
+  // Wishlist
+  "page.wishlist.title": "Lista de deseos",
+  "page.wishlist.empty": "Tu lista de deseos está vacía.",
+  "page.wishlist.addFirst": "Añade tu primera carta",
+  "page.wishlist.priority": "Prioridad",
+  "page.wishlist.maxPrice": "Precio máximo",
+
+  // Decks
+  "page.decks.title": "Mazos",
+  "page.decks.empty": "No tienes mazos todavía.",
+  "page.decks.createFirst": "Crea tu primer mazo",
+  "page.decks.newDeck": "Nuevo mazo",
+  "page.decks.format": "Formato",
+  "page.decks.cards": "cartas",
+
+  // Search
+  "page.search.title": "Buscar cartas",
+  "page.search.placeholder": "Nombre de carta...",
+  "page.search.noResults": "No se encontraron cartas con esos filtros.",
+  "page.search.filters": "Filtros",
+  "page.search.clearFilters": "Limpiar filtros",
+  "page.search.ownership": "Propiedad",
+  "page.search.ownershipAny": "Todas",
+  "page.search.ownershipOwned": "En colección",
+  "page.search.ownershipMissing": "Sin tener",
+  "page.search.ownershipWishlist": "En wishlist",
+  "page.search.sort": "Orden",
+
+  // Stats
+  "page.stats.title": "Estadísticas",
+  "page.stats.valueHistory": "Valor en el tiempo",
+  "page.stats.colorDist": "Distribución por color",
+  "page.stats.rarityDist": "Distribución por rareza",
+  "page.stats.mostValuable": "Más valiosas",
+
+  // Actions
+  "action.save": "Guardar",
+  "action.cancel": "Cancelar",
+  "action.delete": "Eliminar",
+  "action.edit": "Editar",
+  "action.add": "Añadir",
+  "action.confirm": "Confirmar",
+  "action.back": "Volver",
+  "action.clear": "Limpiar",
+  "action.create": "Crear",
+  "action.apply": "Aplicar",
+  "action.preview": "Vista previa",
+  "action.replace": "Reemplazar",
+  "action.import": "Importar",
+  "action.signOut": "Cerrar sesión",
+
+  // Labels
+  "label.price": "Precio",
+  "label.quantity": "Cantidad",
+  "label.condition": "Condición",
+  "label.language": "Idioma",
+  "label.foil": "Foil",
+  "label.folder": "Carpeta",
+  "label.format": "Formato",
+  "label.usd": "USD",
+  "label.mxn": "MXN",
+  "label.newCards": "Nuevas",
+  "label.merged": "Combinadas",
+  "label.missing": "No encontradas",
+  "label.total": "Total",
+  "label.value": "Valor",
+  "label.set": "Edición",
+  "label.rarity": "Rareza",
+  "label.type": "Tipo",
+  "label.notes": "Notas",
+  "label.date": "Fecha",
+  "label.file": "Archivo",
+  "label.name": "Nombre",
+};
+
+export default es;

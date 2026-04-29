@@ -1,0 +1,4 @@
+mtg.marcocastaneda.dev {
+	encode zstd gzip
+	reverse_proxy web:3000
+}

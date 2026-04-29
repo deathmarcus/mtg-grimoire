@@ -33,9 +33,23 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# Claude Code local config (memory, settings — personal, not project)
+.claude/
+
+# Planning / session files
+task_plan.md
+findings.md
+progress.md
+completed.md
+
+# Design reference screenshots
+/*.png
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma

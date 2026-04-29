@@ -1,0 +1,128 @@
+// English dictionary
+const en: Record<string, string> = {
+  // Nav
+  "nav.dashboard": "Dashboard",
+  "nav.collection": "Collection",
+  "nav.folders": "Folders",
+  "nav.wishlist": "Wishlist",
+  "nav.decks": "Decks",
+  "nav.search": "Search",
+  "nav.stats": "Stats",
+  "nav.addCard": "Add card",
+  "nav.import": "Import",
+
+  // Dashboard
+  "page.dashboard.title": "Dashboard",
+  "page.dashboard.totalValue": "Total value",
+  "page.dashboard.cards": "Cards",
+  "page.dashboard.unique": "Unique printings",
+  "page.dashboard.topCards": "Most valuable cards",
+  "page.dashboard.recentActivity": "Recent activity",
+  "page.dashboard.recentlyAdded": "Recently added",
+  "page.dashboard.valueHistory": "Value over time",
+  "page.dashboard.topMovers": "Top movers",
+  "page.dashboard.myCollection": "My collection",
+  "page.dashboard.forSale": "For sale",
+
+  // Collection
+  "page.collection.title": "Collection",
+  "page.collection.search": "Search cards...",
+  "page.collection.allFolders": "All",
+  "page.collection.grid": "Grid",
+  "page.collection.table": "Table",
+  "page.collection.empty": "No cards in this folder.",
+  "page.collection.addFirst": "Add your first card",
+  "page.collection.manage": "Manage →",
+  "page.collection.sortName": "Name",
+  "page.collection.sortPrice": "Price ↓",
+  "page.collection.sortPriceAsc": "Price ↑",
+  "page.collection.sortRecent": "Recent",
+
+  // Import
+  "page.import.title": "Import collection",
+  "page.import.description": "Upload a Manabox CSV, Moxfield TXT, or MTG Arena TXT file to add cards to your collection.",
+  "page.import.dragDrop": "Drag a file or click to select",
+  "page.import.preview": "Preview",
+  "page.import.apply": "Apply import",
+  "page.import.recentImports": "Recent imports",
+  "page.import.format": "Format",
+  "page.import.cards": "Cards",
+  "page.import.new": "New",
+  "page.import.merged": "Merged",
+
+  // Wishlist
+  "page.wishlist.title": "Wishlist",
+  "page.wishlist.empty": "Your wishlist is empty.",
+  "page.wishlist.addFirst": "Add your first card",
+  "page.wishlist.priority": "Priority",
+  "page.wishlist.maxPrice": "Max price",
+
+  // Decks
+  "page.decks.title": "Decks",
+  "page.decks.empty": "You have no decks yet.",
+  "page.decks.createFirst": "Create your first deck",
+  "page.decks.newDeck": "New deck",
+  "page.decks.format": "Format",
+  "page.decks.cards": "cards",
+
+  // Search
+  "page.search.title": "Search cards",
+  "page.search.placeholder": "Card name...",
+  "page.search.noResults": "No cards found with those filters.",
+  "page.search.filters": "Filters",
+  "page.search.clearFilters": "Clear filters",
+  "page.search.ownership": "Ownership",
+  "page.search.ownershipAny": "Any",
+  "page.search.ownershipOwned": "In collection",
+  "page.search.ownershipMissing": "Not owned",
+  "page.search.ownershipWishlist": "On wishlist",
+  "page.search.sort": "Sort",
+
+  // Stats
+  "page.stats.title": "Stats",
+  "page.stats.valueHistory": "Value over time",
+  "page.stats.colorDist": "Color distribution",
+  "page.stats.rarityDist": "Rarity distribution",
+  "page.stats.mostValuable": "Most valuable",
+
+  // Actions
+  "action.save": "Save",
+  "action.cancel": "Cancel",
+  "action.delete": "Delete",
+  "action.edit": "Edit",
+  "action.add": "Add",
+  "action.confirm": "Confirm",
+  "action.back": "Back",
+  "action.clear": "Clear",
+  "action.create": "Create",
+  "action.apply": "Apply",
+  "action.preview": "Preview",
+  "action.replace": "Replace",
+  "action.import": "Import",
+  "action.signOut": "Sign out",
+
+  // Labels
+  "label.price": "Price",
+  "label.quantity": "Quantity",
+  "label.condition": "Condition",
+  "label.language": "Language",
+  "label.foil": "Foil",
+  "label.folder": "Folder",
+  "label.format": "Format",
+  "label.usd": "USD",
+  "label.mxn": "MXN",
+  "label.newCards": "New",
+  "label.merged": "Merged",
+  "label.missing": "Not found",
+  "label.total": "Total",
+  "label.value": "Value",
+  "label.set": "Set",
+  "label.rarity": "Rarity",
+  "label.type": "Type",
+  "label.notes": "Notes",
+  "label.date": "Date",
+  "label.file": "File",
+  "label.name": "Name",
+};
+
+export default en;

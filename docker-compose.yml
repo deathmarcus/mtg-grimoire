@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mtg_db_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mtg
+      POSTGRES_PASSWORD: mtg
+      POSTGRES_DB: mtg_collection
+    ports:
+      # Host port 5433 to avoid clashing with a native Postgres on 5432
+      - "5433:5432"
+    volumes:
+      - mtg_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mtg -d mtg_collection"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mtg_db_data:
