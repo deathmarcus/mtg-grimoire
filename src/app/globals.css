@@ -1090,8 +1090,8 @@ button:disabled,
 /* ── Archidekt-style stacked columns ── */
 .deck-columns {
   display: flex;
+  flex-wrap: wrap;
   gap: 2px;
-  overflow-x: auto;
   align-items: flex-start;
   padding-bottom: 12px;
 }
