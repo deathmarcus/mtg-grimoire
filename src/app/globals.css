@@ -1074,6 +1074,7 @@ button:disabled,
    Deck visual grid
    ========================================================================= */
 
+/* Legacy grid — kept for reference, replaced by deck-columns */
 .deck-visual-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -1084,6 +1085,111 @@ button:disabled,
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+/* ── Archidekt-style stacked columns ── */
+.deck-columns {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  align-items: flex-start;
+  padding-bottom: 12px;
+}
+
+.deck-column {
+  flex-shrink: 0;
+  width: 220px;
+}
+
+.deck-column-header {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: 6px 8px;
+  border-bottom: 1px dashed var(--line-soft);
+  margin-bottom: 2px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.deck-stack-item {
+  cursor: default;
+  opacity: 1;
+  transition: opacity 150ms;
+}
+
+.deck-stack-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-soft);
+  border-bottom: none;
+  min-height: 30px;
+  font-size: 12px;
+}
+
+.deck-stack-item:last-child .deck-stack-row {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.deck-stack-item:hover .deck-stack-row {
+  background: var(--bg-3);
+  border-color: var(--accent);
+  border-bottom: none;
+}
+
+.deck-stack-name {
+  flex: 1;
+  font-family: var(--font-crimson-pro), Georgia, serif;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink-0);
+}
+
+.deck-stack-qty {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.deck-stack-price {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10px;
+  color: var(--ink-3);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.deck-stack-controls {
+  display: flex;
+  gap: 1px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 120ms;
+}
+
+.deck-stack-item:hover .deck-stack-controls {
+  opacity: 1;
+}
+
+.deck-stack-img {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 200ms ease;
+  border: 1px solid var(--accent);
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+}
+
+.deck-stack-item:hover .deck-stack-img {
+  max-height: 308px;
 }
 
 .deck-card-img-wrap {

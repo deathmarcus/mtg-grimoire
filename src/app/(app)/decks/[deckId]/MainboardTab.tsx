@@ -49,9 +49,9 @@ function groupCards(cards: ClientDeckCard[]): Map<TypeGroup, ClientDeckCard[]> {
   return groups;
 }
 
-// ── Single card image tile ──────────────────────────────────────────────────
+// ── Stacked card row (Archidekt-style) ─────────────────────────────────────
 
-function CardTile({
+function StackCard({
   deckId,
   entry,
   currency,
@@ -79,104 +79,60 @@ function CardTile({
   const value = (entry.card.latestUsd ?? 0) * entry.quantity;
 
   return (
-    <div
-      className="deck-card-tile"
-      style={{ opacity: pending ? 0.5 : 1, transition: "opacity 150ms" }}
-    >
-      {/* Card image */}
-      <div className="deck-card-img-wrap">
+    <div className="deck-stack-item" style={{ opacity: pending ? 0.5 : 1 }}>
+      {/* Name row — always visible */}
+      <div className="deck-stack-row">
+        <ManaCost cost={entry.card.manaCost} />
+        {entry.quantity > 1 && (
+          <span className="deck-stack-qty">{entry.quantity}×</span>
+        )}
+        <span className="deck-stack-name">{entry.card.name}</span>
+        <span className="deck-stack-price">
+          {value > 0 ? formatMoney(value, currency, fxRate) : ""}
+        </span>
+        <div className="deck-stack-controls">
+          <button
+            className="btn btn-ghost btn-sm"
+            style={{ padding: "0 4px", fontSize: 12, lineHeight: 1 }}
+            onClick={() => handleQtyChange(-1)}
+            disabled={pending}
+            aria-label="Decrease"
+          >−</button>
+          <button
+            className="btn btn-ghost btn-sm"
+            style={{ padding: "0 4px", fontSize: 12, lineHeight: 1 }}
+            onClick={() => handleQtyChange(1)}
+            disabled={pending}
+            aria-label="Increase"
+          >+</button>
+          <button
+            className="btn btn-ghost btn-sm"
+            style={{ padding: "0 4px", fontSize: 12, lineHeight: 1, color: "var(--neg)" }}
+            onClick={handleRemove}
+            disabled={pending}
+            aria-label="Remove"
+          >×</button>
+        </div>
+      </div>
+
+      {/* Card image — hidden by default, expands downward on hover */}
+      <div className="deck-stack-img">
         {entry.card.imageNormal ? (
           <Image
             src={entry.card.imageNormal}
             alt={entry.card.name}
-            fill
+            width={220}
+            height={308}
             unoptimized
-            style={{ objectFit: "cover", objectPosition: "top" }}
+            style={{ width: "100%", height: "auto", display: "block", borderRadius: "0 0 6px 6px" }}
           />
         ) : (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "var(--bg-3)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 4,
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: 9,
-                color: "var(--ink-3)",
-                textAlign: "center",
-                lineHeight: 1.2,
-              }}
-            >
+          <div style={{ height: 140, background: "var(--bg-3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontFamily: "var(--font-display)", fontSize: 11, color: "var(--ink-3)" }}>
               {entry.card.name}
             </span>
           </div>
         )}
-
-        {/* CMDR badge */}
-        {entry.isCommander && (
-          <span className="deck-card-cmdr-badge">CMDR</span>
-        )}
-
-        {/* Qty badge */}
-        {entry.quantity > 1 && (
-          <span className="deck-card-qty-badge">×{entry.quantity}</span>
-        )}
-
-        {/* Price overlay */}
-        {value > 0 && (
-          <div className="deck-card-price-overlay">
-            {formatMoney(value, currency, fxRate)}
-          </div>
-        )}
-      </div>
-
-      {/* Controls */}
-      <div className="deck-card-controls">
-        <button
-          className="btn btn-ghost btn-sm"
-          style={{ padding: "1px 5px", minWidth: 22, fontSize: 14 }}
-          onClick={() => handleQtyChange(-1)}
-          disabled={pending}
-          aria-label="Decrease quantity"
-        >
-          −
-        </button>
-        <span
-          style={{
-            fontFamily: "var(--font-jetbrains-mono), monospace",
-            fontSize: 11,
-            color: "var(--ink-2)",
-            minWidth: 14,
-            textAlign: "center",
-          }}
-        >
-          {entry.quantity}
-        </span>
-        <button
-          className="btn btn-ghost btn-sm"
-          style={{ padding: "1px 5px", minWidth: 22, fontSize: 14 }}
-          onClick={() => handleQtyChange(1)}
-          disabled={pending}
-          aria-label="Increase quantity"
-        >
-          +
-        </button>
-        <button
-          className="btn btn-ghost btn-sm"
-          style={{ padding: "1px 4px", color: "var(--neg)", marginLeft: "auto", fontSize: 14 }}
-          onClick={handleRemove}
-          disabled={pending}
-          aria-label={`Remove ${entry.card.name}`}
-        >
-          ×
-        </button>
       </div>
     </div>
   );
@@ -306,27 +262,37 @@ export function MainboardTab({ deckId, mainCards, sideCards, currency, fxRate }:
             No cards yet. Use the search above to add cards.
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-            {/* Commander section */}
+          <div className="deck-columns">
+            {/* Commander column */}
             {commanderCards.length > 0 && (
-              <div>
-                <div
-                  style={{
-                    fontFamily: "var(--font-jetbrains-mono), monospace",
-                    fontSize: 10,
-                    letterSpacing: "0.15em",
-                    textTransform: "uppercase",
-                    color: "var(--accent)",
-                    marginBottom: 10,
-                    paddingBottom: 6,
-                    borderBottom: "1px dashed var(--line-soft)",
-                  }}
-                >
-                  Commander
+              <div className="deck-column">
+                <div className="deck-column-header">
+                  <span>Commander</span>
+                  <span>{commanderCards.reduce((s, c) => s + c.quantity, 0)}</span>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {commanderCards.map((c) => (
-                    <CommanderCard
+                {commanderCards.map((c) => (
+                  <CommanderCard
+                    key={c.id}
+                    deckId={deckId}
+                    entry={c}
+                    currency={currency}
+                    fxRate={fxRate}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Type columns */}
+            {Array.from(groups.entries()).map(([type, cards]) => {
+              const typeQty = cards.reduce((s, c) => s + c.quantity, 0);
+              return (
+                <div key={type} className="deck-column">
+                  <div className="deck-column-header">
+                    <span>{type}</span>
+                    <span>{typeQty}</span>
+                  </div>
+                  {cards.map((c) => (
+                    <StackCard
                       key={c.id}
                       deckId={deckId}
                       entry={c}
@@ -334,43 +300,6 @@ export function MainboardTab({ deckId, mainCards, sideCards, currency, fxRate }:
                       fxRate={fxRate}
                     />
                   ))}
-                </div>
-              </div>
-            )}
-
-            {/* Type groups — visual grid */}
-            {Array.from(groups.entries()).map(([type, cards]) => {
-              const typeQty = cards.reduce((s, c) => s + c.quantity, 0);
-              return (
-                <div key={type}>
-                  <div
-                    style={{
-                      fontFamily: "var(--font-jetbrains-mono), monospace",
-                      fontSize: 10,
-                      letterSpacing: "0.15em",
-                      textTransform: "uppercase",
-                      color: "var(--accent)",
-                      marginBottom: 10,
-                      paddingBottom: 6,
-                      borderBottom: "1px dashed var(--line-soft)",
-                      display: "flex",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <span>{type}</span>
-                    <span style={{ color: "var(--ink-3)" }}>{typeQty}</span>
-                  </div>
-                  <div className="deck-visual-grid">
-                    {cards.map((c) => (
-                      <CardTile
-                        key={c.id}
-                        deckId={deckId}
-                        entry={c}
-                        currency={currency}
-                        fxRate={fxRate}
-                      />
-                    ))}
-                  </div>
                 </div>
               );
             })}
