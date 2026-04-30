@@ -3,15 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 
 // ── Pool de videos ─────────────────────────────────────────────────────────────
-/*const VIDEO_POOL = [
-  "/videos/hero-1.mp4",
-  "/videos/hero-2.mp4",
-  "/videos/hero-3.mp4",
-  "/videos/hero-4.mp4",
-  "/videos/hero-5.mp4",
+const VIDEO_POOL = [
+  "/videos/hero-1.webm",
+  "/videos/hero-2.webm",
+  "/videos/hero-3.webm",
+  "/videos/hero-4.webm",
+  "/videos/hero-5.webm",
 ];
-*/
-const VIDEO_POOL = ["/videos/no-existe.mp4"];
 // ── Pool de quotes ─────────────────────────────────────────────────────────────
 const QUOTES = [
   "Un grimorio no es una lista. Es la memoria de cada sobre abierto, cada trade, cada top-deck.",
