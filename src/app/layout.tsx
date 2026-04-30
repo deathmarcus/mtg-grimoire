@@ -36,6 +36,9 @@ export default function RootLayout({
       lang="es"
       className={`${crimsonPro.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mana-font@latest/css/mana.css" />
+      </head>
       <body
         className="min-h-full flex flex-col"
         style={{ position: "relative", zIndex: 1 }}

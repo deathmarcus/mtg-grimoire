@@ -5,19 +5,13 @@ export function ManaCost({ cost }: { cost: string | null | undefined }) {
   if (symbols.length === 0) return null;
   return (
     <span className="mana" aria-label={`Mana cost ${cost}`}>
-      {symbols.map((s, i) => {
-        const cls =
-          s.kind === "color"
-            ? s.value.toLowerCase()
-            : s.kind === "colorless"
-            ? "c"
-            : "c";
-        return (
-          <span key={i} className={`mana-pip ${cls}`}>
-            {s.value}
-          </span>
-        );
-      })}
+      {symbols.map((s, i) => (
+        <i
+          key={i}
+          className={`ms ms-${s.value.toLowerCase()} ms-cost ms-shadow`}
+          aria-hidden="true"
+        />
+      ))}
     </span>
   );
 }

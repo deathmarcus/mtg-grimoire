@@ -147,7 +147,7 @@ export function CurveTab({ manaCurve, colorIdentity, mainCards }: Props) {
                   key={c}
                   style={{ display: "flex", alignItems: "center", gap: 10 }}
                 >
-                  <span className={`mana-pip ${colorLower}`}>{c}</span>
+                  <i className={`ms ms-${colorLower} ms-cost ms-shadow`} aria-hidden="true" />
                   <div
                     style={{
                       flex: 1,

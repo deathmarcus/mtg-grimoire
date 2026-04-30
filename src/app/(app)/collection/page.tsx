@@ -189,6 +189,9 @@ export default async function CollectionPage({
 
           <div style={{ flex: 1 }} />
 
+          <Link href="/collection/new" className="btn btn-primary btn-sm">
+            ＋ {t("action.add", locale)}
+          </Link>
           <ViewToggle current={viewMode} />
         </div>
 
@@ -221,7 +224,7 @@ export default async function CollectionPage({
                     textDecoration: "none",
                   }}
                 >
-                  <span className={`mana-pip ${c.toLowerCase()}`}>{c}</span>
+                  <i className={`ms ms-${c.toLowerCase()} ms-cost ms-shadow`} aria-hidden="true" />
                 </Link>
               );
             })}
@@ -419,7 +422,15 @@ function GridView({
             {showAll && (
               <div
                 className="mono"
-                style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 2 }}
+                style={{
+                  fontSize: 9,
+                  color: "var(--accent)",
+                  background: "oklch(0.78 0.14 78 / 0.12)",
+                  borderRadius: 3,
+                  padding: "1px 5px",
+                  marginTop: 3,
+                  display: "inline-block",
+                }}
               >
                 {it.collection.name}
               </div>

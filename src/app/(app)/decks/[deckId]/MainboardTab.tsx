@@ -378,13 +378,13 @@ export function MainboardTab({ deckId, mainCards, sideCards, currency, fxRate }:
         )}
       </div>
 
-      {/* ── Right: sideboard (text list) ── */}
+      {/* ── Right: considering list ── */}
       <div>
         <div
           className="eyebrow"
           style={{ marginBottom: 14, display: "flex", justifyContent: "space-between" }}
         >
-          <span>Sideboard</span>
+          <span>Considering</span>
           <span style={{ color: "var(--accent)" }}>{totalSide}</span>
         </div>
 
@@ -399,7 +399,7 @@ export function MainboardTab({ deckId, mainCards, sideCards, currency, fxRate }:
               fontFamily: "var(--font-display)",
             }}
           >
-            Empty sideboard
+            Nothing here yet
           </div>
         ) : (
           <div className="panel" style={{ padding: 14 }}>

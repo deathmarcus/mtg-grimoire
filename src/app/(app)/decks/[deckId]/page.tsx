@@ -148,12 +148,10 @@ export default async function DeckDetailPage({ params }: PageProps) {
             <div style={{ display: "flex", gap: 4 }}>
               {colors.length > 0 ? (
                 colors.map((c) => (
-                  <span key={c} className={`mana-pip ${c.toLowerCase()}`}>
-                    {c}
-                  </span>
+                  <i key={c} className={`ms ms-${c.toLowerCase()} ms-cost ms-shadow`} aria-hidden="true" />
                 ))
               ) : (
-                <span className="mana-pip c">C</span>
+                <i className="ms ms-c ms-cost ms-shadow" aria-hidden="true" />
               )}
             </div>
 

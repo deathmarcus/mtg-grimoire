@@ -4,43 +4,34 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { ReplaceButton } from "./ReplaceButton";
-import { IconSearch } from "@/components/Icons";
-
-type SearchParams = Promise<{ q?: string }>;
 
 export default async function ReplacePrintingPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ itemId: string }>;
-  searchParams: SearchParams;
 }) {
   const user = await requireUser();
   const { itemId } = await params;
-  const { q } = await searchParams;
 
   const item = await prisma.collectionItem.findUnique({
     where: { id: itemId },
-    include: { card: { select: { name: true, setCode: true, collectorNumber: true } } },
+    include: { card: { select: { id: true, name: true, setCode: true, collectorNumber: true } } },
   });
   if (!item || item.userId !== user.id) notFound();
 
-  const results =
-    q && q.trim().length >= 2
-      ? await prisma.card.findMany({
-          where: { name: { contains: q.trim(), mode: "insensitive" } },
-          orderBy: [{ name: "asc" }, { setCode: "asc" }],
-          take: 20,
-          select: {
-            id: true,
-            name: true,
-            setCode: true,
-            setName: true,
-            collectorNumber: true,
-            imageSmall: true,
-          },
-        })
-      : [];
+  const printings = await prisma.card.findMany({
+    where: { name: item.card.name },
+    orderBy: [{ setName: "asc" }, { collectorNumber: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      setCode: true,
+      setName: true,
+      collectorNumber: true,
+      imageSmall: true,
+      latestUsd: true,
+    },
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18, maxWidth: 640 }}>
@@ -59,33 +50,18 @@ export default async function ReplacePrintingPage({
             fontWeight: 500,
           }}
         >
-          Replace printing
+          Change printing
         </h1>
         <p style={{ color: "var(--ink-2)", fontSize: 13, marginTop: 6 }}>
           Currently: <strong>{item.card.name}</strong> ({item.card.setCode.toUpperCase()} #{item.card.collectorNumber}).
-          Search for the correct card below.
+          Select a different edition below.
         </p>
       </div>
 
-      <form method="GET" className="panel" style={{ overflow: "hidden" }}>
-        <div className="panel-head" style={{ gap: 8 }}>
-          <IconSearch size={14} className="icon" />
-          <input
-            name="q"
-            defaultValue={q ?? ""}
-            placeholder="Search the Scryfall catalog…"
-            className="grimoire-input"
-            style={{ flex: 1 }}
-          />
-          <button type="submit" className="btn btn-sm">
-            Search
-          </button>
-        </div>
-      </form>
-
-      {results.length > 0 && (
-        <div className="panel" style={{ overflow: "hidden", padding: 0 }}>
-          {results.map((c) => (
+      <div className="panel" style={{ overflow: "hidden", padding: 0 }}>
+        {printings.map((c) => {
+          const isCurrent = c.id === item.card.id;
+          return (
             <div
               key={c.id}
               style={{
@@ -94,6 +70,8 @@ export default async function ReplacePrintingPage({
                 gap: 12,
                 padding: "10px 18px",
                 borderBottom: "1px solid var(--line-soft)",
+                background: isCurrent ? "oklch(0.78 0.14 78 / 0.06)" : undefined,
+                opacity: isCurrent ? 0.6 : 1,
               }}
             >
               {c.imageSmall && (
@@ -114,21 +92,29 @@ export default async function ReplacePrintingPage({
                     color: "var(--ink-0)",
                   }}
                 >
-                  {c.name}
+                  {c.setName}
                 </div>
                 <div className="mono" style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 2 }}>
-                  {c.setName} · {c.setCode.toUpperCase()} #{c.collectorNumber}
+                  {c.setCode.toUpperCase()} #{c.collectorNumber}
+                  {c.latestUsd != null && ` · $${Number(c.latestUsd).toFixed(2)}`}
                 </div>
               </div>
-              <ReplaceButton
-                itemId={itemId}
-                newCardId={c.id}
-                cardName={c.name}
-              />
+              {isCurrent ? (
+                <span className="mono" style={{ fontSize: 10, color: "var(--accent)" }}>
+                  CURRENT
+                </span>
+              ) : (
+                <ReplaceButton itemId={itemId} newCardId={c.id} cardName={c.setName} />
+              )}
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+        {printings.length === 0 && (
+          <div style={{ padding: "32px 18px", textAlign: "center", color: "var(--ink-3)", fontSize: 13 }}>
+            No other printings found in the catalog.
+          </div>
+        )}
+      </div>
     </div>
   );
 }

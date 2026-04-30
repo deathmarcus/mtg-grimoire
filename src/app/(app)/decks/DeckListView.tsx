@@ -33,13 +33,11 @@ export function DeckListView({ decks }: { decks: DeckStat[] }) {
                 <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                   {deck.colors.length > 0 ? (
                     deck.colors.map((c) => (
-                      <span
+                      <i
                         key={c}
-                        className={`mana-pip ${c.toLowerCase()}`}
-                        style={{ fontSize: 10 }}
-                      >
-                        {c}
-                      </span>
+                        className={`ms ms-${c.toLowerCase()} ms-cost ms-shadow`}
+                        aria-hidden="true"
+                      />
                     ))
                   ) : (
                     <span style={{ color: "var(--ink-3)", fontSize: 12 }}>—</span>

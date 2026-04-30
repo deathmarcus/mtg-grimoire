@@ -5,10 +5,8 @@ import { usePathname } from "next/navigation";
 import {
   IconDashboard,
   IconCollection,
-  IconFolders,
   IconWishlist,
   IconDecks,
-  IconPlus,
   IconImport,
   IconSearch,
   IconTrendUp,
@@ -27,11 +25,9 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", labelKey: "nav.dashboard", icon: IconDashboard, section: "library" },
   { href: "/collection", labelKey: "nav.collection", icon: IconCollection, section: "library" },
   { href: "/decks", labelKey: "nav.decks", icon: IconDecks, section: "library" },
-  { href: "/collections", labelKey: "nav.folders", icon: IconFolders, section: "library" },
   { href: "/wishlist", labelKey: "nav.wishlist", icon: IconWishlist, section: "library" },
   { href: "/search", labelKey: "nav.search", icon: IconSearch, section: "tools" },
   { href: "/stats", labelKey: "nav.stats", icon: IconTrendUp, section: "tools" },
-  { href: "/collection/new", labelKey: "nav.addCard", icon: IconPlus, section: "tools" },
   { href: "/import", labelKey: "nav.import", icon: IconImport, section: "tools" },
 ];
 

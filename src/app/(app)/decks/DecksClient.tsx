@@ -188,13 +188,11 @@ export function DecksClient({ decks, emptyLabel, createFirstLabel }: Props) {
                     }}
                   >
                     {deck.colors.map((c) => (
-                      <span
+                      <i
                         key={c}
-                        className={`mana-pip ${c.toLowerCase()}`}
-                        style={{ fontSize: 10 }}
-                      >
-                        {c}
-                      </span>
+                        className={`ms ms-${c.toLowerCase()} ms-cost ms-shadow`}
+                        aria-hidden="true"
+                      />
                     ))}
                   </div>
                   {/* Format chip */}

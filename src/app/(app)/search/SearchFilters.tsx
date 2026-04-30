@@ -125,7 +125,7 @@ export function SearchFilters({ filters }: Props) {
                   transition: "all 120ms",
                 }}
               >
-                <span className={`mana-pip ${c.toLowerCase()}`}>{c}</span>
+                <i className={`ms ms-${c.toLowerCase()} ms-cost ms-shadow`} aria-hidden="true" />
               </button>
             );
           })}
