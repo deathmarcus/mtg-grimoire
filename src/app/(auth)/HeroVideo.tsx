@@ -9,6 +9,13 @@ const VIDEO_POOL = [
   "/videos/hero-3.webm",
   "/videos/hero-4.webm",
   "/videos/hero-5.webm",
+  "/videos/hero-6.webm",
+  "/videos/hero-7.webm",
+  "/videos/hero-8.webm",
+  "/videos/hero-9.webm",
+  "/videos/hero-10.webm",
+  "/videos/hero-11.webm",
+  "/videos/hero-12.webm",
 ];
 // ── Pool de quotes ─────────────────────────────────────────────────────────────
 const QUOTES = [
