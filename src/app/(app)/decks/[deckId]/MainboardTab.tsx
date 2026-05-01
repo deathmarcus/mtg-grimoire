@@ -1,12 +1,13 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import Image from "next/image";
 import type { Currency } from "@prisma/client";
 import { ManaCost } from "@/components/ManaCost";
 import { formatMoney } from "@/lib/money";
 import { removeCardFromDeck, updateDeckCard } from "../actions";
 import type { ClientDeckCard } from "./types";
+import { CardEditModal } from "./CardEditModal";
 
 type Props = {
   deckId: string;
@@ -14,6 +15,7 @@ type Props = {
   sideCards: ClientDeckCard[];
   currency: Currency;
   fxRate: number;
+  commanderColors: Set<string>;
 };
 
 const TYPE_ORDER = [
@@ -56,30 +58,43 @@ function StackCard({
   entry,
   currency,
   fxRate,
+  isOutOfColor,
+  onEdit,
 }: {
   deckId: string;
   entry: ClientDeckCard;
   currency: Currency;
   fxRate: number;
+  isOutOfColor: boolean;
+  onEdit: (entry: ClientDeckCard) => void;
 }) {
   const [pending, startTransition] = useTransition();
 
-  function handleQtyChange(delta: number) {
+  function handleQtyChange(delta: number, e: React.MouseEvent) {
+    e.stopPropagation();
     const newQty = entry.quantity + delta;
-    if (newQty < 1) return handleRemove();
+    if (newQty < 1) {
+      startTransition(() => void removeCardFromDeck(deckId, entry.id));
+      return;
+    }
     const fd = new FormData();
     fd.set("quantity", String(newQty));
     startTransition(() => void updateDeckCard(deckId, entry.id, fd));
   }
 
-  function handleRemove() {
+  function handleRemove(e: React.MouseEvent) {
+    e.stopPropagation();
     startTransition(() => void removeCardFromDeck(deckId, entry.id));
   }
 
   const value = (entry.card.latestUsd ?? 0) * entry.quantity;
 
   return (
-    <div className="deck-stack-item" style={{ opacity: pending ? 0.5 : 1 }}>
+    <div
+      className="deck-stack-item"
+      style={{ opacity: pending ? 0.5 : 1, cursor: "pointer" }}
+      onClick={() => onEdit(entry)}
+    >
       {/* Name row — always visible */}
       <div className="deck-stack-row">
         <ManaCost cost={entry.card.manaCost} />
@@ -87,6 +102,23 @@ function StackCard({
           <span className="deck-stack-qty">{entry.quantity}×</span>
         )}
         <span className="deck-stack-name">{entry.card.name}</span>
+        {isOutOfColor && (
+          <span
+            style={{
+              fontSize: 9,
+              fontFamily: "var(--font-jetbrains-mono), monospace",
+              color: "var(--neg)",
+              border: "1px solid var(--neg)",
+              borderRadius: 3,
+              padding: "0 3px",
+              lineHeight: 1.4,
+              flexShrink: 0,
+            }}
+            title="Outside commander color identity"
+          >
+            ⚠
+          </span>
+        )}
         <span className="deck-stack-price">
           {value > 0 ? formatMoney(value, currency, fxRate) : ""}
         </span>
@@ -94,21 +126,21 @@ function StackCard({
           <button
             className="btn btn-ghost btn-sm"
             style={{ padding: "0 4px", fontSize: 12, lineHeight: 1 }}
-            onClick={() => handleQtyChange(-1)}
+            onClick={(e) => handleQtyChange(-1, e)}
             disabled={pending}
             aria-label="Decrease"
           >−</button>
           <button
             className="btn btn-ghost btn-sm"
             style={{ padding: "0 4px", fontSize: 12, lineHeight: 1 }}
-            onClick={() => handleQtyChange(1)}
+            onClick={(e) => handleQtyChange(1, e)}
             disabled={pending}
             aria-label="Increase"
           >+</button>
           <button
             className="btn btn-ghost btn-sm"
             style={{ padding: "0 4px", fontSize: 12, lineHeight: 1, color: "var(--neg)" }}
-            onClick={handleRemove}
+            onClick={(e) => handleRemove(e)}
             disabled={pending}
             aria-label="Remove"
           >×</button>
@@ -228,7 +260,9 @@ function CommanderCard({
 
 // ── Main component ──────────────────────────────────────────────────────────
 
-export function MainboardTab({ deckId, mainCards, sideCards, currency, fxRate }: Props) {
+export function MainboardTab({ deckId, mainCards, sideCards, currency, fxRate, commanderColors }: Props) {
+  const [editEntry, setEditEntry] = useState<ClientDeckCard | null>(null);
+
   const commanderCards = mainCards.filter((c) => c.isCommander);
   const nonCommanderMain = mainCards.filter((c) => !c.isCommander);
   const groups = groupCards(nonCommanderMain);
@@ -236,8 +270,24 @@ export function MainboardTab({ deckId, mainCards, sideCards, currency, fxRate }:
   const totalMain = mainCards.reduce((s, c) => s + c.quantity, 0);
   const totalSide = sideCards.reduce((s, c) => s + c.quantity, 0);
 
+  function isOutOfColor(card: ClientDeckCard) {
+    if (commanderColors.size === 0) return false;
+    return card.card.colorIdentity.some((col) => !commanderColors.has(col));
+  }
+
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 220px", gap: 28 }}>
+    <>
+      {editEntry && (
+        <CardEditModal
+          deckId={deckId}
+          entry={editEntry}
+          currency={currency}
+          fxRate={fxRate}
+          onClose={() => setEditEntry(null)}
+        />
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 220px", gap: 28 }}>
       {/* ── Left: mainboard ── */}
       <div>
         <div
@@ -298,6 +348,8 @@ export function MainboardTab({ deckId, mainCards, sideCards, currency, fxRate }:
                       entry={c}
                       currency={currency}
                       fxRate={fxRate}
+                      isOutOfColor={isOutOfColor(c)}
+                      onEdit={setEditEntry}
                     />
                   ))}
                 </div>
@@ -345,6 +397,7 @@ export function MainboardTab({ deckId, mainCards, sideCards, currency, fxRate }:
         )}
       </div>
     </div>
+    </>
   );
 }
 

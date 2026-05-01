@@ -35,6 +35,7 @@ export default async function DeckDetailPage({ params }: PageProps) {
           quantity: true,
           isCommander: true,
           board: true,
+          category: true,
           card: {
             select: {
               id: true,
@@ -94,6 +95,7 @@ export default async function DeckDetailPage({ params }: PageProps) {
     quantity: c.quantity,
     isCommander: c.isCommander,
     board: c.board as "MAIN" | "SIDE",
+    category: c.category ?? null,
     card: {
       id: c.card.id,
       name: c.card.name,

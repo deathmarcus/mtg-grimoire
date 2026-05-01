@@ -290,6 +290,7 @@ model DeckCard {
   quantity    Int      @default(1)
   isCommander Boolean  @default(false)
   board       Board    @default(MAIN)
+  category    String?
 
   deck Deck @relation(fields: [deckId], references: [id], onDelete: Cascade)
   card Card @relation(fields: [cardId], references: [id], onDelete: Restrict)

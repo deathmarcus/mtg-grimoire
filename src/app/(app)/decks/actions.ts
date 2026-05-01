@@ -143,6 +143,8 @@ const updateCardSchema = z.object({
   quantity: z.coerce.number().int().min(1).max(99),
   isCommander: z.coerce.boolean().optional(),
   board: z.enum(["MAIN", "SIDE"]).optional(),
+  category: z.string().max(64).optional().nullable(),
+  cardId: z.string().optional(),
 });
 
 export async function updateDeckCard(deckId: string, deckCardId: string, formData: FormData) {
@@ -154,10 +156,13 @@ export async function updateDeckCard(deckId: string, deckCardId: string, formDat
   });
   if (!deck) return { error: "Deck not found" };
 
+  const rawCategory = formData.get("category");
   const parsed = updateCardSchema.safeParse({
     quantity: formData.get("quantity"),
     isCommander: formData.get("isCommander") === "true" ? true : undefined,
     board: formData.get("board") ?? undefined,
+    category: rawCategory !== null ? String(rawCategory) || null : undefined,
+    cardId: formData.get("cardId") ?? undefined,
   });
   if (!parsed.success) return { error: "Invalid input" };
 
@@ -168,6 +173,8 @@ export async function updateDeckCard(deckId: string, deckCardId: string, formDat
       quantity: d.quantity,
       ...(d.isCommander !== undefined && { isCommander: d.isCommander }),
       ...(d.board !== undefined && { board: d.board }),
+      ...(d.category !== undefined && { category: d.category }),
+      ...(d.cardId !== undefined && { cardId: d.cardId }),
     },
   });
 
@@ -187,6 +194,39 @@ export type CardSearchResult = {
   imageSmall: string | null;
   latestUsd: number | null;
 };
+
+export type PrintingResult = {
+  id: string;
+  setCode: string;
+  setName: string;
+  collectorNumber: string;
+  imageSmall: string | null;
+  latestUsd: number | null;
+};
+
+export async function getPrintingsByName(name: string): Promise<PrintingResult[]> {
+  await requireUser();
+  const printings = await prisma.card.findMany({
+    where: { name: { equals: name, mode: "insensitive" } },
+    orderBy: [{ setName: "asc" }, { collectorNumber: "asc" }],
+    select: {
+      id: true,
+      setCode: true,
+      setName: true,
+      collectorNumber: true,
+      imageSmall: true,
+      latestUsd: true,
+    },
+  });
+  return printings.map((c) => ({
+    id: c.id,
+    setCode: c.setCode,
+    setName: c.setName,
+    collectorNumber: c.collectorNumber,
+    imageSmall: c.imageSmall,
+    latestUsd: c.latestUsd ? Number(c.latestUsd) : null,
+  }));
+}
 
 export async function searchCardsForDeck(query: string): Promise<CardSearchResult[]> {
   await requireUser();

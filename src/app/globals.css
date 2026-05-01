@@ -438,6 +438,30 @@ textarea.grimoire-input:focus {
 }
 
 /* =========================================================================
+   Folder grid (Collections page)
+   ========================================================================= */
+
+.folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.folder-card {
+  position: relative;
+  height: 190px;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  transition: transform 150ms, box-shadow 150ms;
+}
+.folder-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px oklch(0 0 0 / 0.45);
+}
+
+/* =========================================================================
    Collection grid
    ========================================================================= */
 

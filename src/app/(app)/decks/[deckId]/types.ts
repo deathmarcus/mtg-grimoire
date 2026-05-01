@@ -4,6 +4,7 @@ export type ClientDeckCard = {
   quantity: number;
   isCommander: boolean;
   board: "MAIN" | "SIDE";
+  category: string | null;
   card: {
     id: string; // Card.id (Scryfall UUID)
     name: string;
