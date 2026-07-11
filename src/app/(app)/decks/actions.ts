@@ -131,9 +131,10 @@ export async function removeCardFromDeck(deckId: string, deckCardId: string) {
   });
   if (!deck) return { error: "Deck not found" };
 
-  await prisma.deckCard.delete({
-    where: { id: deckCardId },
+  const deleted = await prisma.deckCard.deleteMany({
+    where: { id: deckCardId, deckId },
   });
+  if (deleted.count === 0) return { error: "Card not found in deck" };
 
   revalidatePath(`/decks/${deckId}`);
   return { ok: true };
@@ -167,8 +168,17 @@ export async function updateDeckCard(deckId: string, deckCardId: string, formDat
   if (!parsed.success) return { error: "Invalid input" };
 
   const d = parsed.data;
-  await prisma.deckCard.update({
-    where: { id: deckCardId },
+
+  if (d.cardId !== undefined) {
+    const card = await prisma.card.findUnique({
+      where: { id: d.cardId },
+      select: { id: true },
+    });
+    if (!card) return { error: "Card not found" };
+  }
+
+  const updated = await prisma.deckCard.updateMany({
+    where: { id: deckCardId, deckId },
     data: {
       quantity: d.quantity,
       ...(d.isCommander !== undefined && { isCommander: d.isCommander }),
@@ -177,6 +187,7 @@ export async function updateDeckCard(deckId: string, deckCardId: string, formDat
       ...(d.cardId !== undefined && { cardId: d.cardId }),
     },
   });
+  if (updated.count === 0) return { error: "Card not found in deck" };
 
   revalidatePath(`/decks/${deckId}`);
   return { ok: true };

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { getDefaultCollectionId } from "@/lib/collections";
+import { requireOwnedCollectionId } from "@/lib/collections";
 import { logActivity } from "@/lib/activity";
 import type { ViewMode } from "@prisma/client";
 
@@ -39,9 +39,11 @@ export async function addCollectionItem(formData: FormData) {
   if (!parsed.success) return { error: "Invalid input" };
 
   const rawCollectionId = formData.get("collectionId");
-  const collectionId = typeof rawCollectionId === "string" && rawCollectionId.length > 0
-    ? rawCollectionId
-    : await getDefaultCollectionId(user.id);
+  const collectionId = await requireOwnedCollectionId(
+    user.id,
+    typeof rawCollectionId === "string" ? rawCollectionId : null,
+  );
+  if (!collectionId) return { error: "Invalid collection" };
 
   await prisma.collectionItem.upsert({
     where: {
@@ -155,6 +157,12 @@ export async function updateCollectionItem(
     select: { id: true, userId: true, cardId: true },
   });
   if (!item || item.userId !== user.id) return { ok: false, error: "Not found" };
+
+  const ownedCollectionId = await requireOwnedCollectionId(
+    user.id,
+    parsed.data.collectionId,
+  );
+  if (!ownedCollectionId) return { ok: false, error: "Invalid collection" };
 
   const d = parsed.data;
   const priceValue = typeof d.acquiredPrice === "number" ? d.acquiredPrice : null;

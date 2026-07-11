@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { getDefaultCollectionId } from "@/lib/collections";
+import { requireOwnedCollectionId } from "@/lib/collections";
 import { logActivity } from "@/lib/activity";
 import { parseManaboxCsv, type ManaboxRow } from "@/lib/manabox";
 import { parseMoxfieldTxt } from "@/lib/deck-parser";
@@ -386,7 +386,8 @@ export async function applyImport(payload: string): Promise<ApplyResult> {
   const knownIds = new Set(existing.map((c) => c.id));
   const valid = parsed.rows.filter((r) => knownIds.has(r.scryfallId));
 
-  const collectionId = parsed.collectionId ?? (await getDefaultCollectionId(user.id));
+  const collectionId = await requireOwnedCollectionId(user.id, parsed.collectionId);
+  if (!collectionId) return { ok: false, error: "Invalid collection" };
 
   let inserted = 0;
   let merged = 0;
@@ -480,12 +481,10 @@ export async function applyImport(payload: string): Promise<ApplyResult> {
   };
 }
 
-export async function getRecentImports(
-  userId: string,
-  limit = 5,
-): Promise<RecentImport[]> {
+export async function getRecentImports(limit = 5): Promise<RecentImport[]> {
+  const user = await requireUser();
   const logs = await prisma.importLog.findMany({
-    where: { userId },
+    where: { userId: user.id },
     orderBy: { createdAt: "desc" },
     take: limit,
     select: {

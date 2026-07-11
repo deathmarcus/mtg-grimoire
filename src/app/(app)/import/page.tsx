@@ -30,7 +30,7 @@ export default async function ImportPage() {
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       select: { id: true, name: true, isDefault: true },
     }),
-    getRecentImports(user.id, 5),
+    getRecentImports(5),
   ]);
   const defaultId = collections.find((c) => c.isDefault)?.id ?? collections[0]?.id;
   const locale = (dbUser?.locale ?? "es") as Locale;
