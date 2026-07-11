@@ -4,7 +4,7 @@ import Google from "next-auth/providers/google";
 // Edge-safe config: providers that do NOT touch the DB.
 // Credentials + Prisma adapter are added in `src/auth.ts` (node runtime only).
 export const authConfig = {
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 7 },
   pages: { signIn: "/login" },
   providers: [
     Google({
