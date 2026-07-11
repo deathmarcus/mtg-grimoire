@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { signIn } from "@/auth";
 import { SubmitButton } from "@/components/SubmitButton";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+
+const SIGNUP_LIMIT = { limit: 3, windowMs: 60 * 60 * 1000 };
 
 const signupSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
@@ -20,6 +24,11 @@ export default function SignupPage({
 }) {
   async function signupAction(formData: FormData) {
     "use server";
+
+    const ip = getClientIp(await headers());
+    if (!checkRateLimit(`signup:${ip}`, SIGNUP_LIMIT).allowed) {
+      redirect("/signup?error=rate_limited");
+    }
 
     const parsed = signupSchema.safeParse({
       name: formData.get("name") || undefined,
@@ -88,6 +97,11 @@ async function ResolvedForm({
       {error === "exists" && (
         <p role="alert" className="auth-error" style={{ marginBottom: 20 }}>
           An account with that email already exists.
+        </p>
+      )}
+      {error === "rate_limited" && (
+        <p role="alert" className="auth-error" style={{ marginBottom: 20 }}>
+          Too many attempts. Try again later.
         </p>
       )}
 
