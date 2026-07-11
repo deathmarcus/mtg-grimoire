@@ -1,3 +1,4 @@
+import { parseDeckLine } from "./deck-line-parser";
 
 export type DeckImportRow = {
   quantity: number;
@@ -15,7 +16,6 @@ export type DeckImportResult = {
 };
 
 const TRAILING_MARKERS = /(\s+\*[^*]+\*)+$/g;
-const MOXFIELD_LINE_RE = /^(\d+)\s+(.+?)\s+\(([^)]+)\)\s+(\S+)$/;
 
 function isArenaFormat(text: string): boolean {
   return /^(Deck|Sideboard)\s*$/m.test(text);
@@ -43,24 +43,23 @@ function parseMoxfieldWithCommander(text: string): DeckImportResult {
     const hasCmdrMarker = /\*CMDR\*/i.test(raw);
     const cleaned = raw.replace(TRAILING_MARKERS, "").trim();
 
-    const m = cleaned.match(MOXFIELD_LINE_RE);
-    if (!m) {
+    const parsed = parseDeckLine(cleaned);
+    if (!parsed) {
       errors.push(`Line ${i + 1}: could not parse "${cleaned}"`);
       continue;
     }
 
     const isCommander = hasCmdrMarker || inCommanderSection;
-    const name = m[2].trim();
 
     if (isCommander && detectedCommanderName === null) {
-      detectedCommanderName = name;
+      detectedCommanderName = parsed.name;
     }
 
     rows.push({
-      quantity: Number(m[1]),
-      name,
-      setCode: m[3],
-      collectorNumber: m[4],
+      quantity: parsed.quantity,
+      name: parsed.name,
+      setCode: parsed.setCode,
+      collectorNumber: parsed.collectorNumber,
       isCommander,
       board: currentBoard,
     });
@@ -81,14 +80,14 @@ function parseArenaWithBoards(text: string): DeckImportResult {
     if (trimmed === "Sideboard") { currentBoard = "SIDE"; continue; }
     if (trimmed.startsWith("//")) continue;
 
-    const m = trimmed.match(MOXFIELD_LINE_RE);
-    if (!m) continue;
+    const parsed = parseDeckLine(trimmed);
+    if (!parsed) continue;
 
     rows.push({
-      quantity: Number(m[1]),
-      name: m[2].trim(),
-      setCode: m[3],
-      collectorNumber: m[4],
+      quantity: parsed.quantity,
+      name: parsed.name,
+      setCode: parsed.setCode,
+      collectorNumber: parsed.collectorNumber,
       isCommander: false,
       board: currentBoard,
     });
