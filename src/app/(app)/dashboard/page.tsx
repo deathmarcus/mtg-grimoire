@@ -46,7 +46,8 @@ export default async function DashboardPage() {
   const locale = (dbUser?.locale ?? "es") as Locale;
   const rate = fx.rate;
   const catalogDate = latestDate(items.map((it) => it.card.updatedAt));
-  const provenanceText = formatPriceProvenance("catalog", catalogDate, locale);
+  const provenanceText =
+    catalogDate === null ? "" : formatPriceProvenance("catalog", catalogDate, locale);
   const fxText = currency === "MXN" ? formatFxProvenance(rate, fx.date, locale) : null;
 
   const aggregateItems = items.map((it) => ({
