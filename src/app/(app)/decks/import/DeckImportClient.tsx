@@ -9,6 +9,7 @@ import {
   type DeckPreviewRow,
 } from "./actions";
 import { IconImport } from "@/components/Icons";
+import { CardHoverPreview } from "@/components/CardHoverPreview";
 
 const FORMATS = [
   "Commander",
@@ -350,9 +351,11 @@ function PreviewRowItem({
         )}
       </td>
       <td>
-        <span style={{ fontFamily: "var(--font-display)", fontSize: 14 }}>
-          {row.cardName ?? row.name}
-        </span>
+        <CardHoverPreview imageUrl={row.imageSmall} cardName={row.cardName ?? row.name}>
+          <span style={{ fontFamily: "var(--font-display)", fontSize: 14 }}>
+            {row.cardName ?? row.name}
+          </span>
+        </CardHoverPreview>
         {isCommanderCard && (
           <span style={{ fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: 9, color: "var(--accent)", marginLeft: 6 }}>
             CMDR

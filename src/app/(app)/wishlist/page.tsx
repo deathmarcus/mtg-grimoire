@@ -7,6 +7,7 @@ import { pickPriceForFinish } from "@/lib/pricing";
 import { computeGap } from "@/lib/wishlist-helpers";
 import { toNumber } from "@/lib/money-format";
 import { IconPlus, IconSearch } from "@/components/Icons";
+import { CardHoverPreview } from "@/components/CardHoverPreview";
 import { WishlistCard } from "./WishlistCard";
 import { WishlistViewToggle } from "./WishlistViewToggle";
 import { ExportButtons } from "../ExportButtons";
@@ -214,17 +215,19 @@ export default async function WishlistPage({
                   return (
                     <tr key={item.id} style={{ cursor: "pointer" }}>
                       <td>
-                        <Link
-                          href={`/wishlist/${item.id}`}
-                          style={{
-                            fontFamily: "var(--font-crimson-pro), Georgia, serif",
-                            fontSize: 14,
-                            color: "var(--ink-0)",
-                            textDecoration: "none",
-                          }}
-                        >
-                          {item.card.name}
-                        </Link>
+                        <CardHoverPreview imageUrl={item.card.imageNormal} cardName={item.card.name}>
+                          <Link
+                            href={`/wishlist/${item.id}`}
+                            style={{
+                              fontFamily: "var(--font-crimson-pro), Georgia, serif",
+                              fontSize: 14,
+                              color: "var(--ink-0)",
+                              textDecoration: "none",
+                            }}
+                          >
+                            {item.card.name}
+                          </Link>
+                        </CardHoverPreview>
                       </td>
                       <td>
                         <span className="mono" style={{ fontSize: 11, color: "var(--ink-2)" }}>
@@ -278,18 +281,20 @@ export default async function WishlistPage({
                   }}
                 >
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <div
-                      style={{
-                        fontFamily: "var(--font-crimson-pro), Georgia, serif",
-                        fontSize: 14,
-                        color: "var(--ink-0)",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {item.card.name}
-                    </div>
+                    <CardHoverPreview imageUrl={item.card.imageNormal} cardName={item.card.name}>
+                      <div
+                        style={{
+                          fontFamily: "var(--font-crimson-pro), Georgia, serif",
+                          fontSize: 14,
+                          color: "var(--ink-0)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {item.card.name}
+                      </div>
+                    </CardHoverPreview>
                     <div
                       className="mono"
                       style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 2 }}

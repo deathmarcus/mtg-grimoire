@@ -846,6 +846,15 @@ textarea.grimoire-input:focus {
 .bg-foil { background: var(--gradient-foil); }
 .shadow-ambient { box-shadow: var(--shadow-ambient); }
 
+.card-hover-tooltip {
+  z-index: 200;
+  border-radius: var(--r-lg);
+  background: var(--bg-2);
+  box-shadow: var(--shadow-ambient);
+  overflow: hidden;
+  pointer-events: none;
+}
+
 .glass {
   background: color-mix(in oklab, var(--bg-2) 60%, transparent);
   backdrop-filter: blur(12px);

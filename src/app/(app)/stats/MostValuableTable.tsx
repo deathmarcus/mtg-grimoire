@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { RarityDot } from "@/components/RarityDot";
 import { Sparkline } from "@/components/Sparkline";
+import { CardHoverPreview } from "@/components/CardHoverPreview";
 import { formatMoney } from "@/lib/money-format";
 import type { Currency } from "@prisma/client";
 
@@ -14,6 +15,7 @@ export type MostValuableRow = {
   quantity: number;
   latestUsd: number | null;
   imageSmall: string | null;
+  imageNormal: string | null;
   foil: string;
   priceHistory: number[]; // last 6 snapshots ascending
 };
@@ -97,17 +99,19 @@ export function MostValuableTable({ items, currency, rate }: Props) {
 
               {/* Card name — link to detail */}
               <td>
-                <Link
-                  href={`/collection/${row.id}`}
-                  style={{
-                    fontFamily: "var(--font-crimson-pro), Georgia, serif",
-                    fontSize: 14,
-                    color: "var(--ink-0)",
-                    textDecoration: "none",
-                  }}
-                >
-                  {row.name}
-                </Link>
+                <CardHoverPreview imageUrl={row.imageNormal} cardName={row.name}>
+                  <Link
+                    href={`/collection/${row.id}`}
+                    style={{
+                      fontFamily: "var(--font-crimson-pro), Georgia, serif",
+                      fontSize: 14,
+                      color: "var(--ink-0)",
+                      textDecoration: "none",
+                    }}
+                  >
+                    {row.name}
+                  </Link>
+                </CardHoverPreview>
                 {row.foil !== "NORMAL" && (
                   <span
                     style={{

@@ -20,6 +20,7 @@ import { ExportButtons } from "../ExportButtons";
 import { IconSearch } from "@/components/Icons";
 import { RarityDot } from "@/components/RarityDot";
 import { ManaCost } from "@/components/ManaCost";
+import { CardHoverPreview } from "@/components/CardHoverPreview";
 import { t, type Locale } from "@/lib/i18n";
 
 type SearchParams = Promise<{
@@ -482,17 +483,19 @@ function TableView({
                   <RarityDot rarity={it.card.rarity} />
                 </td>
                 <td>
-                  <Link
-                    href={`/collection/${it.id}`}
-                    style={{
-                      fontFamily: "var(--font-crimson-pro), Georgia, serif",
-                      fontSize: 14,
-                      color: "var(--ink-0)",
-                      textDecoration: "none",
-                    }}
-                  >
-                    {it.card.name}
-                  </Link>
+                  <CardHoverPreview imageUrl={it.card.imageNormal} cardName={it.card.name}>
+                    <Link
+                      href={`/collection/${it.id}`}
+                      style={{
+                        fontFamily: "var(--font-crimson-pro), Georgia, serif",
+                        fontSize: 14,
+                        color: "var(--ink-0)",
+                        textDecoration: "none",
+                      }}
+                    >
+                      {it.card.name}
+                    </Link>
+                  </CardHoverPreview>
                 </td>
                 <td>
                   <ManaCost cost={it.card.manaCost} />
@@ -559,18 +562,25 @@ function TableView({
                 }}
               >
                 <RarityDot rarity={it.card.rarity} />
-                <span
-                  style={{
-                    fontFamily: "var(--font-crimson-pro), Georgia, serif",
-                    fontSize: 14,
-                    color: "var(--ink-0)",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
+                <CardHoverPreview
+                  imageUrl={it.card.imageNormal}
+                  cardName={it.card.name}
+                  style={{ minWidth: 0, overflow: "hidden" }}
                 >
-                  {it.card.name}
-                </span>
+                  <span
+                    style={{
+                      fontFamily: "var(--font-crimson-pro), Georgia, serif",
+                      fontSize: 14,
+                      color: "var(--ink-0)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      display: "block",
+                    }}
+                  >
+                    {it.card.name}
+                  </span>
+                </CardHoverPreview>
               </div>
               <div
                 className="mono"
