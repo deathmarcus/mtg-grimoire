@@ -26,6 +26,8 @@ model User {
   displayCurrency Currency @default(USD)
   collectionView  ViewMode @default(GRID)
   locale          String   @default("es")
+  // F5 (#18): per-scope View/Group/Sort prefs, e.g. { collection: { view, group, sort }, deck: { ... } }
+  listPrefs       Json?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

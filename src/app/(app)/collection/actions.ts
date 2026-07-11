@@ -6,16 +6,6 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { requireOwnedCollectionId } from "@/lib/collections";
 import { logActivity } from "@/lib/activity";
-import type { ViewMode } from "@prisma/client";
-
-export async function setViewMode(mode: ViewMode) {
-  const user = await requireUser();
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { collectionView: mode },
-  });
-  revalidatePath("/collection");
-}
 
 const addSchema = z.object({
   cardId: z.string().min(1),
