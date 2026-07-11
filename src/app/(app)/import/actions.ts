@@ -227,6 +227,7 @@ export async function applyImport(payload: string): Promise<ApplyResult> {
   const collectionId = await requireOwnedCollectionId(user.id, parsed.collectionId);
   if (!collectionId) return { ok: false, error: "Invalid collection" };
 
+  // TODO(concurrency): existing keys are read outside the tx; concurrent applies can make skipDuplicates drop rows silently — mitigated by the UI double-submit guard; full fix is serializable isolation.
   let existingKeys = new Set<string>();
   if (parsed.mode === "add") {
     const existingItems = await prisma.collectionItem.findMany({

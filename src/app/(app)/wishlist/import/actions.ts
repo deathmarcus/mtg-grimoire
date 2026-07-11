@@ -31,6 +31,7 @@ export async function previewDeckImport(text: string): Promise<DeckPreviewResult
     return { ok: false, error: errors.length > 0 ? errors[0] : "No cards found in input" };
   }
 
+  // Note: the shared resolver may perform live Scryfall fetches (up to MAX_LIVE_FETCHES) during preview — accepted for consistency with the other importers.
   const idMap = await resolveCardsBySetCollector(deckRows);
   const resolvedIds = Array.from(new Set(idMap.values()));
 
