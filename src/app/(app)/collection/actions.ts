@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/session";
 import { requireOwnedCollectionId } from "@/lib/collections";
 import { logActivity } from "@/lib/activity";
 import { planBulkEdit, type BulkItemSnapshot, type ExistingItem } from "@/lib/bulk-edit";
+import { LANGUAGES } from "@/lib/languages";
 
 const addSchema = z.object({
   cardId: z.string().min(1),
@@ -280,7 +281,13 @@ const bulkChangeSchema = z
   .object({
     collectionId: z.string().min(1).optional(),
     foil: z.enum(["NORMAL", "FOIL", "ETCHED"]).optional(),
-    language: z.string().trim().min(2).max(8).optional(),
+    language: z
+      .string()
+      .trim()
+      .refine((v) => LANGUAGES.some(([code]) => code === v), {
+        message: "Unknown language",
+      })
+      .optional(),
     condition: z.enum(["NM", "LP", "MP", "HP", "DMG"]).optional(),
   })
   .refine(
@@ -360,7 +367,17 @@ export async function bulkUpdateItems(
     existing as ExistingItem[],
   );
 
+  // Los deletes van PRIMERO: liberan la clave del unique index antes de que
+  // el update del survivor la ocupe (si van después, Postgres valida por
+  // sentencia y el update revienta con 23505 dentro de la tx).
   const ops = [
+    ...(plan.deletedIds.length > 0
+      ? [
+          prisma.collectionItem.deleteMany({
+            where: { id: { in: plan.deletedIds }, userId: user.id },
+          }),
+        ]
+      : []),
     ...plan.fieldUpdates.map((op) =>
       prisma.collectionItem.update({
         where: { id: op.id },
@@ -390,13 +407,6 @@ export async function bulkUpdateItems(
         data: { quantity: { increment: op.incrementBy } },
       }),
     ),
-    ...(plan.deletedIds.length > 0
-      ? [
-          prisma.collectionItem.deleteMany({
-            where: { id: { in: plan.deletedIds }, userId: user.id },
-          }),
-        ]
-      : []),
   ];
 
   if (ops.length > 0) {

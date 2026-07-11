@@ -211,6 +211,12 @@ describe("bulkUpdateItems — validation, ownership and transactionality", () =>
     expect(mockPrisma.collectionItem.deleteMany).toHaveBeenCalledWith({
       where: { id: { in: ["item-2"] }, userId: "user-1" },
     });
+    // El delete debe ir ANTES que el update del survivor dentro de la tx:
+    // si va después, el update viola el unique index (23505) porque la fila
+    // fusionada aún ocupa la clave destino.
+    expect(mockPrisma.collectionItem.deleteMany.mock.invocationCallOrder[0]).toBeLessThan(
+      mockPrisma.collectionItem.update.mock.invocationCallOrder[0],
+    );
   });
 
   it("merges into a pre-existing unselected row via incrementExisting", async () => {
