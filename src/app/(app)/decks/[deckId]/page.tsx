@@ -8,6 +8,7 @@ import { checkDeckLegality } from "@/lib/deck-legality";
 import { resolveScopedPrefs } from "@/lib/list-prefs";
 import { DeckBuilder } from "./DeckBuilder";
 import { DeleteDeckButton } from "./DeleteDeckButton";
+import { PublicShareToggle } from "./PublicShareToggle";
 import { ExportButtons } from "../../ExportButtons";
 import { type Locale } from "@/lib/i18n";
 
@@ -34,6 +35,8 @@ export default async function DeckDetailPage({ params }: PageProps) {
       format: true,
       description: true,
       updatedAt: true,
+      isPublic: true,
+      slug: true,
       cards: {
         select: {
           id: true,
@@ -199,6 +202,11 @@ export default async function DeckDetailPage({ params }: PageProps) {
               </div>
             </div>
 
+            <PublicShareToggle
+              deckId={deckId}
+              initialIsPublic={deck.isPublic}
+              initialSlug={deck.slug}
+            />
             <ExportButtons type="deck" deckId={deckId} locale={locale} />
             <DeleteDeckButton deckId={deckId} />
           </div>

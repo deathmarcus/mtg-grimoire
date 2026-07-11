@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { generateDeckSlug } from "@/lib/deck-slug";
 
 // ---------------------------------------------------------------------------
 // Deck CRUD
@@ -68,6 +69,60 @@ export async function deleteDeck(deckId: string) {
   });
   revalidatePath("/decks");
   redirect("/decks");
+}
+
+// ---------------------------------------------------------------------------
+// Public sharing (F8 / #21)
+// ---------------------------------------------------------------------------
+
+const MAX_SLUG_ATTEMPTS = 5;
+
+export async function setDeckPublic(
+  deckId: string,
+  isPublic: boolean
+): Promise<{ ok: true; slug: string | null } | { error: string }> {
+  const user = await requireUser();
+
+  const deck = await prisma.deck.findFirst({
+    where: { id: deckId, userId: user.id },
+    select: { id: true, name: true, slug: true, publicSince: true },
+  });
+  if (!deck) return { error: "Deck not found" };
+
+  if (!isPublic) {
+    await prisma.deck.update({
+      where: { id: deckId },
+      data: { isPublic: false },
+    });
+    revalidatePath(`/decks/${deckId}`);
+    return { ok: true, slug: deck.slug };
+  }
+
+  let slug = deck.slug;
+  if (!slug) {
+    for (let attempt = 0; attempt < MAX_SLUG_ATTEMPTS && !slug; attempt++) {
+      const candidate = generateDeckSlug(deck.name);
+      const existing = await prisma.deck.findUnique({
+        where: { slug: candidate },
+        select: { id: true },
+      });
+      if (!existing) slug = candidate;
+    }
+    if (!slug) return { error: "Could not generate a unique slug, try again" };
+  }
+
+  await prisma.deck.update({
+    where: { id: deckId },
+    data: {
+      isPublic: true,
+      slug,
+      publicSince: deck.publicSince ?? new Date(),
+    },
+  });
+
+  revalidatePath(`/decks/${deckId}`);
+  revalidatePath(`/d/${slug}`);
+  return { ok: true, slug };
 }
 
 // ---------------------------------------------------------------------------

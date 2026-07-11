@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { mockPrisma, mockRequireUser } = vi.hoisted(() => ({
   mockPrisma: {
-    deck: { findFirst: vi.fn() },
+    deck: { findFirst: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     deckCard: {
       deleteMany: vi.fn(),
       updateMany: vi.fn(),
@@ -18,7 +18,7 @@ vi.mock("@/lib/session", () => ({ requireUser: mockRequireUser }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 
-import { removeCardFromDeck, updateDeckCard } from "./actions";
+import { removeCardFromDeck, updateDeckCard, setDeckPublic } from "./actions";
 
 function form(entries: Record<string, string>) {
   const fd = new FormData();
@@ -76,5 +76,81 @@ describe("updateDeckCard — deckCardId bound to deck", () => {
     );
     expect(res).toEqual({ error: "Card not found" });
     expect(mockPrisma.deckCard.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("setDeckPublic — ownership + slug generation", () => {
+  it("errors without touching the DB when the deck belongs to another user", async () => {
+    mockPrisma.deck.findFirst.mockResolvedValue(null);
+    const res = await setDeckPublic("deck-1", true);
+    expect(res).toEqual({ error: "Deck not found" });
+    expect(mockPrisma.deck.update).not.toHaveBeenCalled();
+  });
+
+  it("generates and persists a slug the first time a deck is made public", async () => {
+    mockPrisma.deck.findFirst.mockResolvedValue({
+      id: "deck-1",
+      name: "Mono Red Burn",
+      slug: null,
+      publicSince: null,
+    });
+    mockPrisma.deck.findUnique.mockResolvedValue(null); // slug candidate is free
+    mockPrisma.deck.update.mockResolvedValue({});
+
+    const res = await setDeckPublic("deck-1", true);
+
+    expect("ok" in res && res.ok).toBe(true);
+    expect(mockPrisma.deck.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "deck-1" },
+        data: expect.objectContaining({
+          isPublic: true,
+          slug: expect.stringMatching(/^mono-red-burn-[a-z0-9]{5}$/),
+          publicSince: expect.any(Date),
+        }),
+      })
+    );
+  });
+
+  it("reuses the existing slug and does not reset publicSince on re-activation", async () => {
+    const existingDate = new Date("2026-01-01T00:00:00Z");
+    mockPrisma.deck.findFirst.mockResolvedValue({
+      id: "deck-1",
+      name: "Mono Red Burn",
+      slug: "mono-red-burn-abcde",
+      publicSince: existingDate,
+    });
+    mockPrisma.deck.update.mockResolvedValue({});
+
+    const res = await setDeckPublic("deck-1", true);
+
+    expect(res).toEqual({ ok: true, slug: "mono-red-burn-abcde" });
+    expect(mockPrisma.deck.findUnique).not.toHaveBeenCalled();
+    expect(mockPrisma.deck.update).toHaveBeenCalledWith({
+      where: { id: "deck-1" },
+      data: {
+        isPublic: true,
+        slug: "mono-red-burn-abcde",
+        publicSince: existingDate,
+      },
+    });
+  });
+
+  it("deactivating keeps the slug and does not touch publicSince", async () => {
+    mockPrisma.deck.findFirst.mockResolvedValue({
+      id: "deck-1",
+      name: "Mono Red Burn",
+      slug: "mono-red-burn-abcde",
+      publicSince: new Date("2026-01-01T00:00:00Z"),
+    });
+    mockPrisma.deck.update.mockResolvedValue({});
+
+    const res = await setDeckPublic("deck-1", false);
+
+    expect(res).toEqual({ ok: true, slug: "mono-red-burn-abcde" });
+    expect(mockPrisma.deck.update).toHaveBeenCalledWith({
+      where: { id: "deck-1" },
+      data: { isPublic: false },
+    });
   });
 });
