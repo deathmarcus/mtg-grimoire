@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { addCollectionItem } from "../actions";
-import { IconSearch } from "@/components/Icons";
+import { CollectionNewSearchBox } from "./CollectionNewSearchBox";
 
 type SearchParams = Promise<{ q?: string; pick?: string; added?: string }>;
 
@@ -70,28 +70,7 @@ export default async function AddCardPage({
         <div className="chip pos">Card added. Search again to add another.</div>
       )}
 
-      <form
-        method="GET"
-        className="panel"
-        style={{ overflow: "hidden" }}
-      >
-        <div
-          className="panel-head"
-          style={{ gap: 8 }}
-        >
-          <IconSearch size={14} className="icon" />
-          <input
-            name="q"
-            defaultValue={q ?? ""}
-            placeholder="Search the Scryfall catalog…"
-            className="grimoire-input"
-            style={{ flex: 1 }}
-          />
-          <button type="submit" className="btn btn-sm">
-            Search
-          </button>
-        </div>
-      </form>
+      <CollectionNewSearchBox defaultValue={q ?? ""} />
 
       {results.length > 0 && (
         <div className="panel" style={{ overflow: "hidden", padding: 0 }}>
