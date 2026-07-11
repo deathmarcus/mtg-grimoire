@@ -59,7 +59,10 @@ export type RecentImport = {
   createdAt: Date;
 };
 
-async function ensureCardsExist(ids: string[]): Promise<Set<string>> {
+async function ensureCardsExist(rawIds: string[]): Promise<Set<string>> {
+  // Normalize casing so uppercase variants of a known id never trigger
+  // redundant live fetches (Scryfall ids are lowercase in the catalog).
+  const ids = Array.from(new Set(rawIds.map((id) => id.toLowerCase())));
   if (ids.length === 0) return new Set();
   const existing = await prisma.card.findMany({
     where: { id: { in: ids } },
