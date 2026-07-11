@@ -333,6 +333,7 @@ export default async function CollectionPage({
           showAll={showAll}
           locale={locale}
           initialPrefs={initialPrefs}
+          folders={collections}
         />
       )}
     </div>
