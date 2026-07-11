@@ -8,6 +8,8 @@ import { CurveTab } from "./CurveTab";
 import { TestHandModal } from "./TestHandModal";
 import { StatsTab } from "./StatsTab";
 import { InlineCardSearch } from "./InlineCardSearch";
+import type { ScopedListPrefs } from "@/lib/list-prefs";
+import type { Locale } from "@/lib/i18n";
 
 type Section = "main" | "curve" | "stats";
 
@@ -25,6 +27,8 @@ type Props = {
   legalityResult: DeckLegality;
   currency: Currency;
   fxRate: number;
+  initialPrefs: ScopedListPrefs;
+  locale: Locale;
 };
 
 export function DeckBuilder({
@@ -35,6 +39,8 @@ export function DeckBuilder({
   legalityResult,
   currency,
   fxRate,
+  initialPrefs,
+  locale,
 }: Props) {
   const mainRef = useRef<HTMLDivElement>(null);
   const curveRef = useRef<HTMLDivElement>(null);
@@ -125,6 +131,8 @@ export function DeckBuilder({
             currency={currency}
             fxRate={fxRate}
             commanderColors={commanderColors}
+            initialPrefs={initialPrefs}
+            locale={locale}
           />
         </div>
 

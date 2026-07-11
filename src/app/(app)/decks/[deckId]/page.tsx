@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/session";
 import { formatMoney, getLatestUsdToMxn } from "@/lib/money";
 import { toNumber } from "@/lib/money-format";
 import { checkDeckLegality } from "@/lib/deck-legality";
+import { resolveScopedPrefs } from "@/lib/list-prefs";
 import { DeckBuilder } from "./DeckBuilder";
 import { DeleteDeckButton } from "./DeleteDeckButton";
 import { ExportButtons } from "../../ExportButtons";
@@ -18,10 +19,11 @@ export default async function DeckDetailPage({ params }: PageProps) {
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { displayCurrency: true, locale: true },
+    select: { displayCurrency: true, locale: true, listPrefs: true },
   });
   const currency = dbUser?.displayCurrency ?? "USD";
   const locale = (dbUser?.locale ?? "es") as Locale;
+  const initialPrefs = resolveScopedPrefs(dbUser?.listPrefs, "deck");
   const rate = await getLatestUsdToMxn();
 
   const deck = await prisma.deck.findFirst({
@@ -211,6 +213,8 @@ export default async function DeckDetailPage({ params }: PageProps) {
           legalityResult={legalityResult}
           currency={currency}
           fxRate={rate}
+          initialPrefs={initialPrefs}
+          locale={locale}
         />
       </div>
     </div>

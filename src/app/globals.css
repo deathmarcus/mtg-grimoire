@@ -1141,7 +1141,8 @@ button:disabled,
    Deck visual grid
    ========================================================================= */
 
-/* Legacy grid — kept for reference, replaced by deck-columns */
+/* Visual Grid view — shared by /collection ("grid") and /decks/[id] mainboard ("grid").
+   Un-deprecated for F5 (#18): previously dead/reference-only, now backs the Grid view mode. */
 .deck-visual-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));

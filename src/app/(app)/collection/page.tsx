@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
@@ -9,19 +8,14 @@ import { formatPriceProvenance, formatFxProvenance, latestDate } from "@/lib/pri
 import {
   parseColorsParam,
   parseRarityParam,
-  parseSortParam,
-  rarityOrder,
   toggleColor,
   type ColorLetter,
   type Rarity,
-  type SortKey,
 } from "@/lib/collection-filters";
-import { ViewToggle } from "./ViewToggle";
+import { resolveScopedPrefs } from "@/lib/list-prefs";
+import { CollectionListView, type CollectionRow } from "./CollectionListView";
 import { ExportButtons } from "../ExportButtons";
 import { IconSearch } from "@/components/Icons";
-import { RarityDot } from "@/components/RarityDot";
-import { ManaCost } from "@/components/ManaCost";
-import { CardHoverPreview } from "@/components/CardHoverPreview";
 import { t, type Locale } from "@/lib/i18n";
 
 type SearchParams = Promise<{
@@ -29,7 +23,6 @@ type SearchParams = Promise<{
   folder?: string;
   colors?: string;
   rarity?: string;
-  sort?: string;
 }>;
 
 type FilterState = {
@@ -37,7 +30,6 @@ type FilterState = {
   folder?: string | null;
   colors: ColorLetter[];
   rarity: Rarity | null;
-  sort: SortKey;
 };
 
 function buildUrl(state: FilterState, overrides: Partial<FilterState>): string {
@@ -47,7 +39,6 @@ function buildUrl(state: FilterState, overrides: Partial<FilterState>): string {
   if (merged.folder) p.set("folder", merged.folder);
   if (merged.colors.length) p.set("colors", merged.colors.join(","));
   if (merged.rarity) p.set("rarity", merged.rarity);
-  if (merged.sort !== "name") p.set("sort", merged.sort);
   const s = p.toString();
   return s ? `/collection?${s}` : "/collection";
 }
@@ -62,12 +53,11 @@ export default async function CollectionPage({
 
   const colors = parseColorsParam(sp.colors);
   const rarity = parseRarityParam(sp.rarity);
-  const sort = parseSortParam(sp.sort);
 
   const [dbUser, collections] = await Promise.all([
     prisma.user.findUnique({
       where: { id: user.id },
-      select: { collectionView: true, displayCurrency: true, locale: true },
+      select: { displayCurrency: true, locale: true, listPrefs: true },
     }),
     prisma.collection.findMany({
       where: { userId: user.id },
@@ -75,9 +65,9 @@ export default async function CollectionPage({
       select: { id: true, name: true },
     }),
   ]);
-  const viewMode = dbUser?.collectionView ?? "GRID";
   const currency = dbUser?.displayCurrency ?? "USD";
   const locale = (dbUser?.locale ?? "es") as Locale;
+  const initialPrefs = resolveScopedPrefs(dbUser?.listPrefs, "collection");
 
   const activeFolder = sp.folder && collections.some((c) => c.id === sp.folder)
     ? sp.folder
@@ -89,7 +79,6 @@ export default async function CollectionPage({
     folder: activeFolder,
     colors,
     rarity,
-    sort,
   };
 
   const cardWhere: Prisma.CardWhereInput = {};
@@ -118,49 +107,49 @@ export default async function CollectionPage({
   if (activeFolder) whereClause.collectionId = activeFolder;
   if (Object.keys(cardWhere).length > 0) whereClause.card = cardWhere;
 
-  const orderBy: Prisma.CollectionItemOrderByWithRelationInput =
-    sort === "price"
-      ? { card: { latestUsd: { sort: "desc", nulls: "last" } } }
-      : { card: { name: "asc" } };
-
   const [items, { rate, date: fxDate }] = await Promise.all([
     prisma.collectionItem.findMany({
       where: whereClause,
       include: { card: true, collection: { select: { name: true } } },
-      orderBy,
+      orderBy: { card: { name: "asc" } },
     }),
     getLatestFxRate(),
   ]);
 
-  let rows = items.map((it) => {
+  const rows: CollectionRow[] = items.map((it) => {
     const priceUsd = pickPriceForFinish(it.card, it.foil);
     const totalUsd = (priceUsd ?? 0) * it.quantity;
-    return { it, priceUsd, totalUsd };
+    return {
+      itemId: it.id,
+      card: {
+        name: it.card.name,
+        typeLine: it.card.typeLine ?? "",
+        colors: it.card.colors,
+        cmc: it.card.cmc ?? 0,
+        rarity: it.card.rarity,
+        setCode: it.card.setCode,
+      },
+      quantity: it.quantity,
+      price: priceUsd,
+      totalUsd,
+      imageNormal: it.card.imageNormal,
+      manaCost: it.card.manaCost ?? "",
+      collectorNumber: it.card.collectorNumber,
+      foil: it.foil,
+      condition: it.condition,
+      collectionName: it.collection.name,
+    };
   });
 
   const catalogDate = latestDate(items.map((it) => it.card.updatedAt));
   const provenanceText = formatPriceProvenance("catalog", catalogDate, locale);
   const fxText = currency === "MXN" ? formatFxProvenance(rate, fxDate, locale) : null;
 
-  if (sort === "rarity") {
-    rows = [...rows].sort((a, b) => {
-      const ra = rarityOrder(a.it.card.rarity);
-      const rb = rarityOrder(b.it.card.rarity);
-      if (ra !== rb) return ra - rb;
-      return a.it.card.name.localeCompare(b.it.card.name);
-    });
-  }
-
   const totalQty = items.reduce((s, i) => s + i.quantity, 0);
   const totalValue = rows.reduce((s, r) => s + r.totalUsd, 0);
 
   const ALL_COLORS: ColorLetter[] = ["W", "U", "B", "R", "G", "C"];
   const ALL_RARITIES: Rarity[] = ["common", "uncommon", "rare", "mythic"];
-  const SORTS: { key: SortKey; label: string }[] = [
-    { key: "price", label: "Value ↓" },
-    { key: "name", label: "Name A–Z" },
-    { key: "rarity", label: "Rarity" },
-  ];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -181,7 +170,6 @@ export default async function CollectionPage({
               <input type="hidden" name="colors" value={colors.join(",")} />
             )}
             {rarity && <input type="hidden" name="rarity" value={rarity} />}
-            {sort !== "name" && <input type="hidden" name="sort" value={sort} />}
             <input
               id="collection-search"
               name="q"
@@ -200,10 +188,9 @@ export default async function CollectionPage({
           <Link href="/collection/new" className="btn btn-primary btn-sm">
             ＋ {t("action.add", locale)}
           </Link>
-          <ViewToggle current={viewMode} />
         </div>
 
-        {/* Color + rarity + sort row */}
+        {/* Color + rarity row */}
         <div
           className="panel-body"
           style={{
@@ -254,21 +241,6 @@ export default async function CollectionPage({
                 style={{ textTransform: "capitalize" }}
               >
                 {r[0].toUpperCase()}
-              </Link>
-            ))}
-          </div>
-
-          <div style={{ flex: 1 }} />
-
-          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-            <span className="eyebrow">Sort</span>
-            {SORTS.map((s) => (
-              <Link
-                key={s.key}
-                href={buildUrl(state, { sort: s.key })}
-                className={`btn btn-sm ${sort === s.key ? "btn-primary" : ""}`}
-              >
-                {s.label}
               </Link>
             ))}
           </div>
@@ -353,281 +325,16 @@ export default async function CollectionPage({
             </div>
           )}
         </div>
-      ) : viewMode === "GRID" ? (
-        <GridView rows={rows} currency={currency} rate={rate} showAll={showAll} />
       ) : (
-        <TableView rows={rows} currency={currency} rate={rate} showAll={showAll} />
+        <CollectionListView
+          rows={rows}
+          currency={currency}
+          rate={rate}
+          showAll={showAll}
+          locale={locale}
+          initialPrefs={initialPrefs}
+        />
       )}
     </div>
-  );
-}
-
-type Row = {
-  it: Awaited<ReturnType<typeof prisma.collectionItem.findMany>>[number] & {
-    card: NonNullable<Awaited<ReturnType<typeof prisma.card.findUnique>>>;
-    collection: { name: string };
-  };
-  priceUsd: number | null;
-  totalUsd: number;
-};
-
-function GridView({
-  rows,
-  currency,
-  rate,
-  showAll,
-}: {
-  rows: Row[];
-  currency: "USD" | "MXN";
-  rate: number;
-  showAll: boolean;
-}) {
-  return (
-    <div className="coll-grid">
-      {rows.map(({ it, totalUsd }) => (
-        <Link
-          key={it.id}
-          href={`/collection/${it.id}`}
-          className={`coll-card${it.foil !== "NORMAL" ? " is-foil" : ""}`}
-        >
-          <div className="card-art">
-            {it.card.imageNormal ? (
-              <Image
-                src={it.card.imageNormal}
-                alt={it.card.name}
-                width={244}
-                height={340}
-                unoptimized
-              />
-            ) : (
-              <div
-                aria-hidden="true"
-                style={{ width: "100%", height: "100%", background: "var(--bg-2)" }}
-              />
-            )}
-          </div>
-          <div className="coll-card-qty">×{it.quantity}</div>
-          <div className="coll-card-meta">
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                marginBottom: 4,
-              }}
-            >
-              <RarityDot rarity={it.card.rarity} />
-              <span
-                className="mono"
-                style={{ fontSize: 10, color: "var(--ink-3)" }}
-              >
-                {it.card.setCode.toUpperCase()} · {it.card.collectorNumber}
-              </span>
-            </div>
-            <div className="coll-card-name">{it.card.name}</div>
-            <div className="coll-card-price">
-              {formatMoney(totalUsd, currency, rate)}
-            </div>
-            {showAll && (
-              <div
-                className="mono"
-                style={{
-                  fontSize: 9,
-                  color: "var(--accent)",
-                  background: "oklch(0.78 0.14 78 / 0.12)",
-                  borderRadius: 3,
-                  padding: "1px 5px",
-                  marginTop: 3,
-                  display: "inline-block",
-                }}
-              >
-                {it.collection.name}
-              </div>
-            )}
-          </div>
-        </Link>
-      ))}
-    </div>
-  );
-}
-
-function TableView({
-  rows,
-  currency,
-  rate,
-  showAll,
-}: {
-  rows: Row[];
-  currency: "USD" | "MXN";
-  rate: number;
-  showAll: boolean;
-}) {
-  return (
-    <>
-      {/* Desktop table */}
-      <div className="panel hidden md:block" style={{ overflow: "hidden" }}>
-        <table className="tbl">
-          <caption className="sr-only">Collection items</caption>
-          <thead>
-            <tr>
-              <th></th>
-              <th>Card</th>
-              <th>Cost</th>
-              <th>Set</th>
-              {showAll && <th>Folder</th>}
-              <th className="num">Qty</th>
-              <th>Finish</th>
-              <th>Cond.</th>
-              <th className="num">Unit</th>
-              <th className="num">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(({ it, priceUsd, totalUsd }) => (
-              <tr key={it.id} style={{ cursor: "pointer" }}>
-                <td style={{ width: 24 }}>
-                  <RarityDot rarity={it.card.rarity} />
-                </td>
-                <td>
-                  <CardHoverPreview imageUrl={it.card.imageNormal} cardName={it.card.name}>
-                    <Link
-                      href={`/collection/${it.id}`}
-                      style={{
-                        fontFamily: "var(--font-crimson-pro), Georgia, serif",
-                        fontSize: 14,
-                        color: "var(--ink-0)",
-                        textDecoration: "none",
-                      }}
-                    >
-                      {it.card.name}
-                    </Link>
-                  </CardHoverPreview>
-                </td>
-                <td>
-                  <ManaCost cost={it.card.manaCost} />
-                </td>
-                <td>
-                  <span className="mono" style={{ fontSize: 11, color: "var(--ink-2)" }}>
-                    {it.card.setCode.toUpperCase()}
-                  </span>
-                </td>
-                {showAll && (
-                  <td>
-                    <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                      {it.collection.name}
-                    </span>
-                  </td>
-                )}
-                <td className="num">{it.quantity}</td>
-                <td>
-                  {it.foil === "NORMAL" ? (
-                    <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                      —
-                    </span>
-                  ) : (
-                    <span className="foil-chip">{it.foil}</span>
-                  )}
-                </td>
-                <td>
-                  <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                    {it.condition}
-                  </span>
-                </td>
-                <td className="num">
-                  {formatMoney(priceUsd ?? null, currency, rate)}
-                </td>
-                <td className="num" style={{ color: "var(--accent)" }}>
-                  {formatMoney(totalUsd, currency, rate)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile list */}
-      <div className="panel md:hidden" style={{ padding: 0 }}>
-        {rows.map(({ it, priceUsd, totalUsd }) => (
-          <Link
-            key={it.id}
-            href={`/collection/${it.id}`}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              padding: "12px 18px",
-              borderBottom: "1px solid var(--line-soft)",
-              textDecoration: "none",
-              color: "inherit",
-            }}
-          >
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  marginBottom: 2,
-                }}
-              >
-                <RarityDot rarity={it.card.rarity} />
-                <CardHoverPreview
-                  imageUrl={it.card.imageNormal}
-                  cardName={it.card.name}
-                  style={{ minWidth: 0, overflow: "hidden" }}
-                >
-                  <span
-                    style={{
-                      fontFamily: "var(--font-crimson-pro), Georgia, serif",
-                      fontSize: 14,
-                      color: "var(--ink-0)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                      display: "block",
-                    }}
-                  >
-                    {it.card.name}
-                  </span>
-                </CardHoverPreview>
-              </div>
-              <div
-                className="mono"
-                style={{
-                  fontSize: 10,
-                  color: "var(--ink-3)",
-                  marginTop: 2,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                  flexWrap: "wrap",
-                }}
-              >
-                <span>
-                  {it.card.setCode.toUpperCase()} · {it.quantity}× · {it.condition}
-                  {showAll && ` · ${it.collection.name}`}
-                </span>
-                {it.foil !== "NORMAL" && <span className="foil-chip">{it.foil}</span>}
-              </div>
-            </div>
-            <div style={{ textAlign: "right", flexShrink: 0 }}>
-              <div
-                className="mono"
-                style={{ fontSize: 12, color: "var(--accent)" }}
-              >
-                {formatMoney(totalUsd, currency, rate)}
-              </div>
-              <div
-                className="mono"
-                style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 2 }}
-              >
-                {formatMoney(priceUsd ?? null, currency, rate)}/u
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </>
   );
 }

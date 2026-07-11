@@ -5,7 +5,12 @@ import Image from "next/image";
 import type { Currency } from "@prisma/client";
 import { ManaCost } from "@/components/ManaCost";
 import { CardHoverPreview } from "@/components/CardHoverPreview";
+import { ListControls } from "@/components/ListControls";
 import { formatMoney } from "@/lib/money";
+import { groupCards, sortCards, type ListItem } from "@/lib/list-controls";
+import type { ScopedListPrefs } from "@/lib/list-prefs";
+import { useIsMobile } from "@/lib/useIsMobile";
+import type { Locale } from "@/lib/i18n";
 import { removeCardFromDeck, updateDeckCard } from "../actions";
 import type { ClientDeckCard } from "./types";
 import { CardEditModal } from "./CardEditModal";
@@ -17,39 +22,16 @@ type Props = {
   currency: Currency;
   fxRate: number;
   commanderColors: Set<string>;
+  initialPrefs: ScopedListPrefs;
+  locale: Locale;
 };
 
-const TYPE_ORDER = [
-  "Creature",
-  "Planeswalker",
-  "Instant",
-  "Sorcery",
-  "Enchantment",
-  "Artifact",
-  "Land",
-  "Other",
-] as const;
+/** ClientDeckCard already has `card` + `quantity` — this just adds the `price`
+ *  field list-controls needs for the "Price" sort. */
+type DeckListItem = ClientDeckCard & ListItem;
 
-type TypeGroup = (typeof TYPE_ORDER)[number];
-
-function getTypeGroup(typeLine: string): TypeGroup {
-  for (const t of TYPE_ORDER) {
-    if (t === "Other") return "Other";
-    if (typeLine.includes(t)) return t;
-  }
-  return "Other";
-}
-
-function groupCards(cards: ClientDeckCard[]): Map<TypeGroup, ClientDeckCard[]> {
-  const groups = new Map<TypeGroup, ClientDeckCard[]>();
-  for (const t of TYPE_ORDER) groups.set(t, []);
-  for (const c of cards) {
-    groups.get(getTypeGroup(c.card.typeLine))!.push(c);
-  }
-  for (const [k, v] of groups) {
-    if (v.length === 0) groups.delete(k);
-  }
-  return groups;
+function toListItem(c: ClientDeckCard): DeckListItem {
+  return { ...c, price: c.card.latestUsd };
 }
 
 // ── Stacked card row (Archidekt-style) ─────────────────────────────────────
@@ -259,14 +241,213 @@ function CommanderCard({
   );
 }
 
+// ── Group section wrapper (header + count, shared by grid/text views) ──────
+
+function GroupSection({
+  label,
+  count,
+  children,
+}: {
+  label: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      {label && (
+        <div className="deck-column-header" style={{ width: "100%" }}>
+          <span>{label}</span>
+          <span>{count}</span>
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+// ── Text row (flat list, no stacked art) ────────────────────────────────────
+
+function TextRow({
+  deckId,
+  entry,
+  currency,
+  fxRate,
+  isOutOfColor,
+}: {
+  deckId: string;
+  entry: ClientDeckCard;
+  currency: Currency;
+  fxRate: number;
+  isOutOfColor?: boolean;
+}) {
+  const [pending, startTransition] = useTransition();
+
+  function handleQtyChange(delta: number) {
+    const newQty = entry.quantity + delta;
+    if (newQty < 1) return startTransition(() => void removeCardFromDeck(deckId, entry.id));
+    const fd = new FormData();
+    fd.set("quantity", String(newQty));
+    startTransition(() => void updateDeckCard(deckId, entry.id, fd));
+  }
+
+  const value = (entry.card.latestUsd ?? 0) * entry.quantity;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "4px 0",
+        fontSize: 12,
+        opacity: pending ? 0.5 : 1,
+        borderBottom: "1px solid var(--line-soft)",
+      }}
+    >
+      <button
+        className="btn btn-ghost btn-sm"
+        style={{ padding: "1px 4px", minWidth: 18 }}
+        onClick={() => handleQtyChange(-1)}
+        disabled={pending}
+        aria-label="Decrease"
+      >
+        −
+      </button>
+      <span
+        className="mono"
+        style={{ fontSize: 11, color: "var(--ink-3)", width: 20, textAlign: "center" }}
+      >
+        {entry.quantity}×
+      </span>
+      <button
+        className="btn btn-ghost btn-sm"
+        style={{ padding: "1px 4px", minWidth: 18 }}
+        onClick={() => handleQtyChange(1)}
+        disabled={pending}
+        aria-label="Increase"
+      >
+        +
+      </button>
+      <ManaCost cost={entry.card.manaCost} />
+      <CardHoverPreview imageUrl={entry.card.imageNormal} cardName={entry.card.name} style={{ flex: 1, minWidth: 0 }}>
+        <span
+          style={{
+            fontFamily: "var(--font-crimson-pro), Georgia, serif",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            display: "block",
+          }}
+        >
+          {entry.card.name}
+        </span>
+      </CardHoverPreview>
+      {isOutOfColor && (
+        <span style={{ fontSize: 9, color: "var(--neg)" }} title="Outside commander color identity">
+          ⚠
+        </span>
+      )}
+      <span className="mono" style={{ fontSize: 10, color: "var(--accent)", flexShrink: 0 }}>
+        {value > 0 ? formatMoney(value, currency, fxRate) : ""}
+      </span>
+    </div>
+  );
+}
+
+// ── Grid tile (visual grid, reuses .deck-visual-grid / .deck-card-tile) ────
+
+function GridTile({
+  entry,
+  currency,
+  fxRate,
+  isOutOfColor,
+  onEdit,
+}: {
+  entry: ClientDeckCard;
+  currency: Currency;
+  fxRate: number;
+  isOutOfColor?: boolean;
+  onEdit: (entry: ClientDeckCard) => void;
+}) {
+  const value = (entry.card.latestUsd ?? 0) * entry.quantity;
+  return (
+    <button
+      type="button"
+      className="deck-card-tile"
+      style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}
+      onClick={() => onEdit(entry)}
+    >
+      <div className="deck-card-img-wrap">
+        {entry.card.imageNormal ? (
+          <Image src={entry.card.imageNormal} alt={entry.card.name} fill unoptimized style={{ objectFit: "cover" }} />
+        ) : (
+          <div style={{ position: "absolute", inset: 0, background: "var(--bg-3)" }} />
+        )}
+        <span
+          className="mono"
+          style={{
+            position: "absolute",
+            top: 4,
+            left: 4,
+            fontSize: 10,
+            color: "var(--ink-0)",
+            background: "oklch(0 0 0 / 0.55)",
+            borderRadius: 3,
+            padding: "1px 5px",
+          }}
+        >
+          {entry.quantity}×
+        </span>
+        {isOutOfColor && (
+          <span
+            style={{ position: "absolute", top: 4, right: 4, fontSize: 10, color: "var(--neg)" }}
+            title="Outside commander color identity"
+          >
+            ⚠
+          </span>
+        )}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
+        <span
+          style={{
+            fontFamily: "var(--font-crimson-pro), Georgia, serif",
+            color: "var(--ink-0)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {entry.card.name}
+        </span>
+        <span className="mono" style={{ color: "var(--accent)", flexShrink: 0 }}>
+          {value > 0 ? formatMoney(value, currency, fxRate) : ""}
+        </span>
+      </div>
+    </button>
+  );
+}
+
 // ── Main component ──────────────────────────────────────────────────────────
 
-export function MainboardTab({ deckId, mainCards, sideCards, currency, fxRate, commanderColors }: Props) {
+export function MainboardTab({
+  deckId,
+  mainCards,
+  sideCards,
+  currency,
+  fxRate,
+  commanderColors,
+  initialPrefs,
+  locale,
+}: Props) {
   const [editEntry, setEditEntry] = useState<ClientDeckCard | null>(null);
+  const [prefs, setPrefs] = useState(initialPrefs);
+  const isMobile = useIsMobile();
+  const effectiveView = isMobile && prefs.view === "stacks" ? "text" : prefs.view;
 
   const commanderCards = mainCards.filter((c) => c.isCommander);
   const nonCommanderMain = mainCards.filter((c) => !c.isCommander);
-  const groups = groupCards(nonCommanderMain);
+  const listItems = nonCommanderMain.map(toListItem);
+  const groups = groupCards(sortCards(listItems, prefs.sort), prefs.group);
 
   const totalMain = mainCards.reduce((s, c) => s + c.quantity, 0);
   const totalSide = sideCards.reduce((s, c) => s + c.quantity, 0);
@@ -293,10 +474,14 @@ export function MainboardTab({ deckId, mainCards, sideCards, currency, fxRate, c
       <div>
         <div
           className="eyebrow"
-          style={{ marginBottom: 14, display: "flex", justifyContent: "space-between" }}
+          style={{ marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}
         >
           <span>Mainboard</span>
           <span style={{ color: "var(--accent)" }}>{totalMain}</span>
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <ListControls scope="deck" prefs={prefs} onChange={setPrefs} locale={locale} />
         </div>
 
         {mainCards.length === 0 ? (
@@ -311,6 +496,58 @@ export function MainboardTab({ deckId, mainCards, sideCards, currency, fxRate, c
             }}
           >
             No cards yet. Use the search above to add cards.
+          </div>
+        ) : effectiveView === "grid" ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {commanderCards.length > 0 && (
+              <GroupSection label="Commander" count={commanderCards.reduce((s, c) => s + c.quantity, 0)}>
+                <div className="deck-visual-grid">
+                  {commanderCards.map((c) => (
+                    <GridTile key={c.id} entry={c} currency={currency} fxRate={fxRate} onEdit={setEditEntry} />
+                  ))}
+                </div>
+              </GroupSection>
+            )}
+            {groups.map((g) => (
+              <GroupSection key={g.key} label={g.label} count={g.items.reduce((s, c) => s + c.quantity, 0)}>
+                <div className="deck-visual-grid">
+                  {g.items.map((c) => (
+                    <GridTile
+                      key={c.id}
+                      entry={c}
+                      currency={currency}
+                      fxRate={fxRate}
+                      isOutOfColor={isOutOfColor(c)}
+                      onEdit={setEditEntry}
+                    />
+                  ))}
+                </div>
+              </GroupSection>
+            ))}
+          </div>
+        ) : effectiveView === "text" ? (
+          <div className="panel" style={{ padding: 14, display: "flex", flexDirection: "column", gap: 16 }}>
+            {commanderCards.length > 0 && (
+              <GroupSection label="Commander" count={commanderCards.reduce((s, c) => s + c.quantity, 0)}>
+                {commanderCards.map((c) => (
+                  <TextRow key={c.id} deckId={deckId} entry={c} currency={currency} fxRate={fxRate} />
+                ))}
+              </GroupSection>
+            )}
+            {groups.map((g) => (
+              <GroupSection key={g.key} label={g.label} count={g.items.reduce((s, c) => s + c.quantity, 0)}>
+                {g.items.map((c) => (
+                  <TextRow
+                    key={c.id}
+                    deckId={deckId}
+                    entry={c}
+                    currency={currency}
+                    fxRate={fxRate}
+                    isOutOfColor={isOutOfColor(c)}
+                  />
+                ))}
+              </GroupSection>
+            ))}
           </div>
         ) : (
           <div className="deck-columns">
@@ -333,29 +570,28 @@ export function MainboardTab({ deckId, mainCards, sideCards, currency, fxRate, c
               </div>
             )}
 
-            {/* Type columns */}
-            {Array.from(groups.entries()).map(([type, cards]) => {
-              const typeQty = cards.reduce((s, c) => s + c.quantity, 0);
-              return (
-                <div key={type} className="deck-column">
+            {/* Group columns */}
+            {groups.map((g) => (
+              <div key={g.key} className="deck-column">
+                {g.label && (
                   <div className="deck-column-header">
-                    <span>{type}</span>
-                    <span>{typeQty}</span>
+                    <span>{g.label}</span>
+                    <span>{g.items.reduce((s, c) => s + c.quantity, 0)}</span>
                   </div>
-                  {cards.map((c) => (
-                    <StackCard
-                      key={c.id}
-                      deckId={deckId}
-                      entry={c}
-                      currency={currency}
-                      fxRate={fxRate}
-                      isOutOfColor={isOutOfColor(c)}
-                      onEdit={setEditEntry}
-                    />
-                  ))}
-                </div>
-              );
-            })}
+                )}
+                {g.items.map((c) => (
+                  <StackCard
+                    key={c.id}
+                    deckId={deckId}
+                    entry={c}
+                    currency={currency}
+                    fxRate={fxRate}
+                    isOutOfColor={isOutOfColor(c)}
+                    onEdit={setEditEntry}
+                  />
+                ))}
+              </div>
+            ))}
           </div>
         )}
       </div>

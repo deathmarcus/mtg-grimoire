@@ -38,6 +38,24 @@ const es: Record<string, string> = {
   "page.collection.sortPriceAsc": "Precio ↑",
   "page.collection.sortRecent": "Reciente",
 
+  // List controls (View / Group / Sort — /collection y /decks/[id])
+  "list.view.label": "Vista",
+  "list.view.text": "Texto",
+  "list.view.stacks": "Pilas",
+  "list.view.grid": "Cuadrícula",
+  "list.group.label": "Agrupar",
+  "list.group.none": "Ninguno",
+  "list.group.type": "Tipo",
+  "list.group.color": "Color",
+  "list.group.cmc": "CMC",
+  "list.group.rarity": "Rareza",
+  "list.group.set": "Edición",
+  "list.sort.label": "Ordenar",
+  "list.sort.name": "Nombre",
+  "list.sort.price": "Precio",
+  "list.sort.cmc": "CMC",
+  "list.sort.quantity": "Cantidad",
+
   // Import
   "page.import.title": "Importar colección",
   "page.import.description": "Sube un archivo CSV de Manabox, TXT de Moxfield, o TXT de MTG Arena para añadir cartas a tu colección.",
