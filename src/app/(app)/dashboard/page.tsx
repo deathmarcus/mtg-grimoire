@@ -9,11 +9,8 @@ import {
 } from "@/lib/pricing";
 import {
   aggregateValueByDate,
-  computePriceChangePct,
-  pickTopMovers,
-  toNumber,
+  computeTopMovers,
   type SnapshotRow,
-  type TopMoverInput,
   type ValuedItem,
 } from "@/lib/dashboard";
 import { getRecentActivity } from "@/lib/activity";
@@ -426,57 +423,6 @@ async function fetchOwnedSnapshots(userId: string): Promise<SnapshotRow[]> {
     orderBy: { snapshotDate: "asc" },
   });
   return rows;
-}
-
-function computeTopMovers(
-  items: Array<{
-    cardId: string;
-    foil: import("@prisma/client").FoilKind;
-    card: { name: string; setCode: string };
-  }>,
-  snapshots: SnapshotRow[],
-): TopMoverInput[] {
-  if (items.length === 0 || snapshots.length === 0) return [];
-
-  // Group snapshots by cardId, sorted ascending by date.
-  const byCard = new Map<string, SnapshotRow[]>();
-  for (const s of snapshots) {
-    const list = byCard.get(s.cardId) ?? [];
-    list.push(s);
-    byCard.set(s.cardId, list);
-  }
-
-  // De-dupe by cardId — top movers is per printing, not per item row.
-  const seen = new Set<string>();
-  const inputs: TopMoverInput[] = [];
-  for (const it of items) {
-    if (seen.has(it.cardId)) continue;
-    seen.add(it.cardId);
-    const list = byCard.get(it.cardId);
-    if (!list || list.length < 2) continue;
-    const last = list[list.length - 1];
-    const prev = list[list.length - 2];
-    const finishKey =
-      it.foil === "FOIL"
-        ? "priceUsdFoil"
-        : it.foil === "ETCHED"
-          ? "priceUsdEtched"
-          : "priceUsd";
-    const latestUsd =
-      toNumber(last[finishKey]) ?? toNumber(last.priceUsd);
-    const previousUsd =
-      toNumber(prev[finishKey]) ?? toNumber(prev.priceUsd);
-    const changePct = computePriceChangePct(latestUsd, previousUsd);
-    if (latestUsd == null) continue;
-    inputs.push({
-      cardId: it.cardId,
-      name: it.card.name,
-      setCode: it.card.setCode,
-      latestUsd,
-      changePct,
-    });
-  }
-  return pickTopMovers(inputs, 5);
 }
 
 function EmptyState() {
