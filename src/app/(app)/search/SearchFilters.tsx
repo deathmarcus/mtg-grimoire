@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { PRIMARY_FORMATS } from "@/lib/card-detail";
 import { toggleColor, type ColorLetter, type Rarity } from "@/lib/collection-filters";
 import { buildSearchUrl, type SearchFilters, type OwnershipFilter, type SearchSortKey } from "@/lib/search-filters";
+import { CardNameAutocomplete } from "@/components/CardNameAutocomplete";
 
 type Props = {
   filters: SearchFilters;
@@ -27,6 +28,15 @@ const OWNERSHIP_OPTIONS: { value: OwnershipFilter; label: string }[] = [
 
 export function SearchFilters({ filters }: Props) {
   const router = useRouter();
+  const [q, setQ] = useState(filters.q);
+  // Resync local text-field state when filters.q changes externally (e.g.
+  // "Clear all", browser back/forward, or picking a suggestion) — adjusting
+  // state during render instead of in an effect avoids an extra render pass.
+  const [prevFiltersQ, setPrevFiltersQ] = useState(filters.q);
+  if (filters.q !== prevFiltersQ) {
+    setPrevFiltersQ(filters.q);
+    setQ(filters.q);
+  }
 
   const navigate = useCallback(
     (overrides: Partial<SearchFilters>) => {
@@ -88,15 +98,16 @@ export function SearchFilters({ filters }: Props) {
       <div className="field" style={{ marginBottom: 16 }}>
         <label htmlFor="search-q">Text search</label>
         <form onSubmit={handleQSubmit} role="search">
-          <input
+          <CardNameAutocomplete
             id="search-q"
             name="q"
-            type="search"
-            defaultValue={filters.q}
-            key={filters.q}
+            value={q}
+            onValueChange={setQ}
+            onSelect={(picked) => navigate({ q: picked })}
             placeholder="Name or set…"
             className="grimoire-input"
             style={{ width: "100%" }}
+            aria-label="Search cards by name"
           />
         </form>
       </div>
