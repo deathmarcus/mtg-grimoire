@@ -10,6 +10,7 @@ import {
   IconImport,
   IconSearch,
   IconTrendUp,
+  IconSets,
   IconSignOut,
 } from "@/components/Icons";
 import { t, type Locale } from "@/lib/i18n";
@@ -24,6 +25,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", labelKey: "nav.dashboard", icon: IconDashboard, section: "library" },
   { href: "/collection", labelKey: "nav.collection", icon: IconCollection, section: "library" },
+  { href: "/sets", labelKey: "nav.sets", icon: IconSets, section: "library" },
   { href: "/decks", labelKey: "nav.decks", icon: IconDecks, section: "library" },
   { href: "/wishlist", labelKey: "nav.wishlist", icon: IconWishlist, section: "library" },
   { href: "/search", labelKey: "nav.search", icon: IconSearch, section: "tools" },

@@ -67,6 +67,9 @@ export type ScryfallCard = {
   prices: ScryfallPrices;
   released_at?: string;
   legalities?: Record<string, string>;
+  set_type?: string;
+  promo?: boolean;
+  variation?: boolean;
 };
 
 export type ScryfallBulkDataEntry = {
@@ -112,6 +115,10 @@ export type CardRow = {
   latestUsdEtched: string | null;
   legalities: Record<string, string> | null;
   scryfallUpdatedAt: Date | null;
+  releasedAt: Date | null;
+  setType: string | null;
+  promo: boolean;
+  variation: boolean;
 };
 
 export function toCardRow(c: ScryfallCard): CardRow {
@@ -143,5 +150,9 @@ export function toCardRow(c: ScryfallCard): CardRow {
     latestUsdEtched: c.prices?.usd_etched ?? null,
     legalities: c.legalities ?? null,
     scryfallUpdatedAt: c.released_at ? new Date(c.released_at) : null,
+    releasedAt: c.released_at ? new Date(c.released_at) : null,
+    setType: c.set_type ?? null,
+    promo: c.promo ?? false,
+    variation: c.variation ?? false,
   };
 }
