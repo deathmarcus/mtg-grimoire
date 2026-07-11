@@ -13,6 +13,12 @@ import {
   SCRYFALL_API,
 } from "../../../../../scripts/lib/scryfall";
 
+/** Max live Scryfall fetches performed per import (fallback for unknown cards). */
+const MAX_LIVE_FETCHES = 50;
+
+/** Max rows accepted in a single import payload. */
+const MAX_IMPORT_ROWS = 5000;
+
 // ---------------------------------------------------------------------------
 // Card resolution (local DB + live Scryfall fallback)
 // ---------------------------------------------------------------------------
@@ -75,7 +81,7 @@ async function resolveCardsBySetCollector(
     (r) => !result.has(`${r.setCode}|${r.collectorNumber}`),
   );
 
-  for (const row of afterNameFallback) {
+  for (const row of afterNameFallback.slice(0, MAX_LIVE_FETCHES)) {
     try {
       const url = `${SCRYFALL_API}/cards/named?exact=${encodeURIComponent(row.name)}&set=${encodeURIComponent(row.setCode)}`;
       const card = await fetchJson<ScryfallCard>(url);
@@ -134,6 +140,9 @@ export async function previewDeckImport(formData: FormData): Promise<DeckPreview
   if (rows.length === 0) {
     return { ok: false, error: errors[0] ?? "No valid rows found" };
   }
+  if (rows.length > MAX_IMPORT_ROWS) {
+    return { ok: false, error: `Too many rows (max ${MAX_IMPORT_ROWS})` };
+  }
 
   const idMap = await resolveCardsBySetCollector(rows);
   const resolvedIds = Array.from(new Set(idMap.values()));
@@ -187,14 +196,16 @@ const createSchema = z.object({
   name: z.string().min(1).max(120).trim(),
   format: z.string().max(60).trim().default(""),
   commanderCardId: z.string().nullable().optional(),
-  rows: z.array(
-    z.object({
-      cardId: z.string().min(1),
-      quantity: z.number().int().min(1).max(99),
-      isCommander: z.boolean(),
-      board: z.enum(["MAIN", "SIDE"]).default("MAIN"),
-    }),
-  ),
+  rows: z
+    .array(
+      z.object({
+        cardId: z.string().min(1),
+        quantity: z.number().int().min(1).max(99),
+        isCommander: z.boolean(),
+        board: z.enum(["MAIN", "SIDE"]).default("MAIN"),
+      }),
+    )
+    .max(MAX_IMPORT_ROWS),
 });
 
 export type CreateDeckResult =

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { parseDeckList, type DeckRow } from "@/lib/deck-parser";
@@ -101,12 +102,24 @@ async function findCard(dr: DeckRow) {
 
 export type DeckApplyResult = { ok: true; added: number; skipped: number } | { ok: false; error: string };
 
+const applySchema = z.object({
+  tag: z.string().max(60).optional(),
+  rows: z
+    .array(
+      z.object({
+        scryfallId: z.string().min(1),
+        needed: z.number().int().min(1).max(99),
+      }),
+    )
+    .max(1000),
+});
+
 export async function applyDeckImport(payload: string): Promise<DeckApplyResult> {
   const user = await requireUser();
 
-  let data: { tag: string; rows: { scryfallId: string; needed: number }[] };
+  let data: z.infer<typeof applySchema>;
   try {
-    data = JSON.parse(payload);
+    data = applySchema.parse(JSON.parse(payload));
   } catch {
     return { ok: false, error: "Invalid payload" };
   }

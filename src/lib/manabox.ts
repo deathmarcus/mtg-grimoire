@@ -72,7 +72,7 @@ export function parseManaboxCsv(text: string): {
       return;
     }
     rows.push({
-      scryfallId,
+      scryfallId: scryfallId.toLowerCase(),
       name: name || "",
       setCode: pick(r, "Set code", "Set", "set").toLowerCase(),
       collectorNumber: pick(r, "Collector number", "collector_number"),

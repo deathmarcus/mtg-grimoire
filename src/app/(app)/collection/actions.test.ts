@@ -7,6 +7,7 @@ const { mockPrisma, mockRequireUser } = vi.hoisted(() => ({
     collectionItem: {
       upsert: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
       findUnique: vi.fn(),
       delete: vi.fn(),
     },
@@ -19,7 +20,7 @@ vi.mock("@/lib/session", () => ({ requireUser: mockRequireUser }));
 vi.mock("@/lib/activity", () => ({ logActivity: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { addCollectionItem, updateCollectionItem } from "./actions";
+import { addCollectionItem, updateCollectionItem, updateItemQuantity } from "./actions";
 
 function form(entries: Record<string, string>) {
   const fd = new FormData();
@@ -75,5 +76,26 @@ describe("updateCollectionItem — collectionId ownership", () => {
     expect(res).toEqual({ ok: false, error: "Invalid collection" });
     expect(mockPrisma.collectionItem.update).not.toHaveBeenCalled();
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateItemQuantity — validation", () => {
+  it.each([0, -1, 2.5, 10000])(
+    "rejects invalid quantity %p without touching the DB",
+    async (quantity) => {
+      const res = await updateItemQuantity("item-1", quantity);
+      expect(res).toEqual({ error: "Invalid quantity" });
+      expect(mockPrisma.collectionItem.updateMany).not.toHaveBeenCalled();
+    },
+  );
+
+  it("accepts a valid quantity and updates", async () => {
+    mockPrisma.collectionItem.updateMany.mockResolvedValue({ count: 1 });
+    const res = await updateItemQuantity("item-1", 3);
+    expect(res).not.toEqual({ error: "Invalid quantity" });
+    expect(mockPrisma.collectionItem.updateMany).toHaveBeenCalledWith({
+      where: { id: "item-1", userId: "user-1" },
+      data: { quantity: 3 },
+    });
   });
 });

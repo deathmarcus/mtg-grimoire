@@ -7,7 +7,7 @@ import { formatMoney, getLatestUsdToMxn, toNumber } from "@/lib/money";
 import { pickPriceForFinish } from "@/lib/pricing";
 import { parseLegalities } from "@/lib/card-detail";
 import { Sparkline } from "@/components/Sparkline";
-import { updateItemQuantity } from "../actions";
+import { deleteCollectionItem, updateItemQuantity } from "../actions";
 import { DeleteButton } from "./DeleteButton";
 import { DetailTabs } from "./DetailTabs";
 import { InlineEditForm } from "./InlineEditForm";
@@ -87,6 +87,10 @@ export default async function ItemDetailPage({
   }
   async function decAction() {
     "use server";
+    if (item!.quantity <= 1) {
+      await deleteCollectionItem(itemId);
+      return;
+    }
     await updateItemQuantity(itemId, item!.quantity - 1);
   }
 
