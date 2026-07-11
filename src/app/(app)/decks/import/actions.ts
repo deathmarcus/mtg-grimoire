@@ -6,101 +6,10 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { parseDeckImport } from "@/lib/deck-import-parser";
-import {
-  fetchJson,
-  toCardRow,
-  type ScryfallCard,
-  SCRYFALL_API,
-} from "../../../../../scripts/lib/scryfall";
-
-/** Max live Scryfall fetches performed per import (fallback for unknown cards). */
-const MAX_LIVE_FETCHES = 50;
+import { resolveCardsBySetCollector, setCollectorKey } from "@/lib/card-resolver";
 
 /** Max rows accepted in a single import payload. */
 const MAX_IMPORT_ROWS = 5000;
-
-// ---------------------------------------------------------------------------
-// Card resolution (local DB + live Scryfall fallback)
-// ---------------------------------------------------------------------------
-
-async function resolveCardsBySetCollector(
-  rows: { name: string; setCode: string; collectorNumber: string }[],
-): Promise<Map<string, string>> {
-  const result = new Map<string, string>();
-
-  const unique = Array.from(
-    new Map(rows.map((r) => [`${r.setCode}|${r.collectorNumber}`, r])).values(),
-  );
-
-  // 1. Bulk lookup by (setCode, collectorNumber)
-  const bySetCollector = await prisma.card.findMany({
-    where: {
-      OR: unique.map((r) => ({
-        setCode: r.setCode.toLowerCase(),
-        collectorNumber: r.collectorNumber,
-      })),
-    },
-    select: { id: true, setCode: true, collectorNumber: true, name: true },
-  });
-
-  for (const card of bySetCollector) {
-    result.set(`${card.setCode.toUpperCase()}|${card.collectorNumber}`, card.id);
-  }
-
-  // 2. Name+set fallback for still-missing rows
-  const stillMissing = unique.filter(
-    (r) => !result.has(`${r.setCode}|${r.collectorNumber}`),
-  );
-
-  if (stillMissing.length > 0) {
-    const byName = await prisma.card.findMany({
-      where: {
-        OR: stillMissing.map((r) => ({
-          name: { equals: r.name, mode: "insensitive" as const },
-          setCode: r.setCode.toLowerCase(),
-        })),
-      },
-      select: { id: true, setCode: true, collectorNumber: true, name: true },
-    });
-
-    for (const card of byName) {
-      const nameMatch = stillMissing.find(
-        (r) =>
-          r.name.toLowerCase() === card.name.toLowerCase() &&
-          r.setCode.toLowerCase() === card.setCode.toLowerCase() &&
-          !result.has(`${r.setCode}|${r.collectorNumber}`),
-      );
-      if (nameMatch) {
-        result.set(`${nameMatch.setCode}|${nameMatch.collectorNumber}`, card.id);
-      }
-    }
-  }
-
-  // 3. Live Scryfall fallback
-  const afterNameFallback = unique.filter(
-    (r) => !result.has(`${r.setCode}|${r.collectorNumber}`),
-  );
-
-  for (const row of afterNameFallback.slice(0, MAX_LIVE_FETCHES)) {
-    try {
-      const url = `${SCRYFALL_API}/cards/named?exact=${encodeURIComponent(row.name)}&set=${encodeURIComponent(row.setCode)}`;
-      const card = await fetchJson<ScryfallCard>(url);
-      const { legalities, ...rest } = toCardRow(card);
-      const data = legalities == null ? rest : { ...rest, legalities };
-      await prisma.card.upsert({
-        where: { id: rest.id },
-        create: data,
-        update: data,
-      });
-      result.set(`${row.setCode}|${row.collectorNumber}`, rest.id);
-    } catch {
-      // leave as missing
-    }
-    await new Promise((r) => setTimeout(r, 120));
-  }
-
-  return result;
-}
 
 // ---------------------------------------------------------------------------
 // Preview
@@ -157,7 +66,7 @@ export async function previewDeckImport(formData: FormData): Promise<DeckPreview
   const cardMap = new Map(cards.map((c) => [c.id, c]));
 
   const previewRows: DeckPreviewRow[] = rows.map((r) => {
-    const key = `${r.setCode}|${r.collectorNumber}`;
+    const key = setCollectorKey(r.setCode, r.collectorNumber);
     const cardId = idMap.get(key) ?? null;
     const card = cardId ? cardMap.get(cardId) : null;
     return {

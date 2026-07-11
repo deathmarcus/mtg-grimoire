@@ -17,7 +17,7 @@ import {
   type CardRow,
   type ScryfallBulkDataList,
   type ScryfallCard,
-} from "./lib/scryfall";
+} from "../src/lib/scryfall";
 
 const prisma = new PrismaClient();
 const BATCH_SIZE = 500;

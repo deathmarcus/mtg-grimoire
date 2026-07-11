@@ -9,18 +9,15 @@ import { logActivity } from "@/lib/activity";
 import { parseManaboxCsv, type ManaboxRow } from "@/lib/manabox";
 import { parseMoxfieldTxt } from "@/lib/deck-parser";
 import { parseArenaTxt } from "@/lib/arena-parser";
-import { isScryfallId } from "@/lib/scryfall-id";
 import {
-  fetchJson,
-  toCardRow,
-  type ScryfallCard,
-  SCRYFALL_API,
-} from "../../../../scripts/lib/scryfall";
+  ensureCardsExist,
+  resolveCardsBySetCollector,
+  setCollectorKey,
+} from "@/lib/card-resolver";
+import { enrichRows, itemKey, loadCardsAndExistingItems } from "@/lib/import-preview";
+import { planImport } from "@/lib/import-apply";
 
 export type ImportFormat = "manabox" | "moxfield" | "arena";
-
-/** Max live Scryfall fetches performed per import (fallback for unknown cards). */
-const MAX_LIVE_FETCHES = 50;
 
 /** Max rows accepted in a single import payload. */
 const MAX_IMPORT_ROWS = 5000;
@@ -59,130 +56,6 @@ export type RecentImport = {
   createdAt: Date;
 };
 
-async function ensureCardsExist(rawIds: string[]): Promise<Set<string>> {
-  // Normalize casing so uppercase variants of a known id never trigger
-  // redundant live fetches (Scryfall ids are lowercase in the catalog).
-  const ids = Array.from(new Set(rawIds.map((id) => id.toLowerCase())));
-  if (ids.length === 0) return new Set();
-  const existing = await prisma.card.findMany({
-    where: { id: { in: ids } },
-    select: { id: true },
-  });
-  const have = new Set(existing.map((c) => c.id));
-  const missing = ids.filter((id) => !have.has(id) && isScryfallId(id));
-  if (missing.length === 0) return have;
-
-  // Live Scryfall fallback (respect ~10 req/s with 120ms gap), capped per import.
-  for (const id of missing.slice(0, MAX_LIVE_FETCHES)) {
-    try {
-      const card = await fetchJson<ScryfallCard>(`${SCRYFALL_API}/cards/${id}`);
-      const { legalities, ...rest } = toCardRow(card);
-      const data = legalities == null ? rest : { ...rest, legalities };
-      await prisma.card.upsert({
-        where: { id: rest.id },
-        create: data,
-        update: data,
-      });
-      have.add(id);
-    } catch {
-      // leave as missing
-    }
-    await new Promise((r) => setTimeout(r, 120));
-  }
-  return have;
-}
-
-/**
- * For Moxfield/Arena rows: look up Card by (setCode, collectorNumber).
- * Falls back to (name, setCode). If still missing, attempts a live Scryfall
- * fetch by name+set and upserts the result.
- *
- * Returns a map from `${setCode}|${collectorNumber}` → Card id.
- */
-async function resolveCardsBySetCollector(
-  rows: { name: string; setCode: string; collectorNumber: string }[],
-): Promise<Map<string, string>> {
-  const result = new Map<string, string>();
-
-  // 1. Bulk lookup by (setCode, collectorNumber) using the @@index
-  const unique = Array.from(
-    new Map(rows.map((r) => [`${r.setCode}|${r.collectorNumber}`, r])).values(),
-  );
-
-  const bySetCollector = await prisma.card.findMany({
-    where: {
-      OR: unique.map((r) => ({
-        setCode: r.setCode.toLowerCase(),
-        collectorNumber: r.collectorNumber,
-      })),
-    },
-    select: { id: true, setCode: true, collectorNumber: true, name: true },
-  });
-
-  for (const card of bySetCollector) {
-    result.set(`${card.setCode.toUpperCase()}|${card.collectorNumber}`, card.id);
-  }
-
-  // 2. For still-missing rows, try name+setCode fallback in DB
-  const stillMissing = unique.filter(
-    (r) => !result.has(`${r.setCode}|${r.collectorNumber}`),
-  );
-
-  if (stillMissing.length > 0) {
-    const byName = await prisma.card.findMany({
-      where: {
-        OR: stillMissing.map((r) => ({
-          name: { equals: r.name, mode: "insensitive" as const },
-          setCode: r.setCode.toLowerCase(),
-        })),
-      },
-      select: { id: true, setCode: true, collectorNumber: true, name: true },
-    });
-
-    for (const card of byName) {
-      // Only fill in entries that are still missing
-      const nameMatch = stillMissing.find(
-        (r) =>
-          r.name.toLowerCase() === card.name.toLowerCase() &&
-          r.setCode.toLowerCase() === card.setCode.toLowerCase() &&
-          !result.has(`${r.setCode}|${r.collectorNumber}`),
-      );
-      if (nameMatch) {
-        result.set(
-          `${nameMatch.setCode}|${nameMatch.collectorNumber}`,
-          card.id,
-        );
-      }
-    }
-  }
-
-  // 3. Live Scryfall fallback for still-missing rows
-  const afterNameFallback = unique.filter(
-    (r) => !result.has(`${r.setCode}|${r.collectorNumber}`),
-  );
-
-  for (const row of afterNameFallback.slice(0, MAX_LIVE_FETCHES)) {
-    try {
-      // Search Scryfall by name + set
-      const searchUrl = `${SCRYFALL_API}/cards/named?exact=${encodeURIComponent(row.name)}&set=${encodeURIComponent(row.setCode)}`;
-      const card = await fetchJson<ScryfallCard>(searchUrl);
-      const { legalities, ...rest } = toCardRow(card);
-      const data = legalities == null ? rest : { ...rest, legalities };
-      await prisma.card.upsert({
-        where: { id: rest.id },
-        create: data,
-        update: data,
-      });
-      result.set(`${row.setCode}|${row.collectorNumber}`, rest.id);
-    } catch {
-      // leave as missing
-    }
-    await new Promise((r) => setTimeout(r, 120));
-  }
-
-  return result;
-}
-
 /**
  * Convert Moxfield/Arena rows into ManaboxRow-compatible PreviewRows.
  * Uses setCode+collectorNumber lookup with name+set fallback and live Scryfall.
@@ -195,50 +68,22 @@ async function previewDeckRows(
 
   const idMap = await resolveCardsBySetCollector(rawRows);
 
-  // Collect all resolved card IDs for a single DB query
+  const keys = rawRows.map((r) => ({
+    cardId: idMap.get(setCollectorKey(r.setCode, r.collectorNumber)) ?? null,
+    foil: "NORMAL",
+    language: "en",
+    condition: "NM",
+  }));
+
   const resolvedIds = Array.from(new Set(idMap.values()));
-  const cards = await prisma.card.findMany({
-    where: { id: { in: resolvedIds } },
-    select: { id: true, name: true, imageSmall: true, latestUsd: true },
-  });
-  const cardMap = new Map(cards.map((c) => [c.id, c]));
-
-  const existingItems =
-    resolvedIds.length > 0
-      ? await prisma.collectionItem.findMany({
-          where: { userId, cardId: { in: resolvedIds } },
-          select: {
-            cardId: true,
-            foil: true,
-            language: true,
-            condition: true,
-            quantity: true,
-          },
-        })
-      : [];
-
-  const itemKey = (cardId: string, foil: string, language: string, condition: string) =>
-    `${cardId}|${foil}|${language}|${condition}`;
-  const existingMap = new Map(
-    existingItems.map((i) => [
-      itemKey(i.cardId, i.foil, i.language, i.condition),
-      i.quantity,
-    ]),
-  );
+  const { cards, existingItems } = await loadCardsAndExistingItems(userId, resolvedIds);
+  const enriched = enrichRows(keys, cards, existingItems);
 
   const rows: PreviewRow[] = rawRows.map((r, idx) => {
-    const key = `${r.setCode}|${r.collectorNumber}`;
-    const cardId = idMap.get(key) ?? null;
-    const card = cardId ? cardMap.get(cardId) : null;
-    const matched = cardId != null;
-
-    if (!matched) {
+    const cardId = keys[idx].cardId;
+    if (cardId == null) {
       errors.push(`Row ${idx + 1}: could not match "${r.name}" (${r.setCode} #${r.collectorNumber})`);
     }
-
-    const existingQty = matched && cardId
-      ? existingMap.get(itemKey(cardId, "NORMAL", "en", "NM")) ?? 0
-      : 0;
 
     return {
       // ManaboxRow fields with defaults for non-Manabox imports
@@ -256,11 +101,7 @@ async function previewDeckRows(
       acquiredPrice: null,
       acquiredCurrency: null,
       // PreviewRow fields
-      matched,
-      existingQuantity: existingQty,
-      cardName: card?.name ?? null,
-      imageSmall: card?.imageSmall ?? null,
-      latestUsd: card?.latestUsd?.toString() ?? null,
+      ...enriched[idx],
     };
   });
 
@@ -294,40 +135,16 @@ export async function previewImport(formData: FormData): Promise<PreviewResult> 
     const ids = Array.from(new Set(parsed.rows.map((r) => r.scryfallId)));
     const known = await ensureCardsExist(ids);
 
-    const cards = await prisma.card.findMany({
-      where: { id: { in: Array.from(known) } },
-      select: { id: true, name: true, imageSmall: true, latestUsd: true },
-    });
-    const cardMap = new Map(cards.map((c) => [c.id, c]));
+    const { cards, existingItems } = await loadCardsAndExistingItems(user.id, Array.from(known));
+    const keys = parsed.rows.map((r) => ({
+      cardId: known.has(r.scryfallId) ? r.scryfallId : null,
+      foil: r.foil,
+      language: r.language,
+      condition: r.condition,
+    }));
+    const enriched = enrichRows(keys, cards, existingItems);
 
-    const existingItems = await prisma.collectionItem.findMany({
-      where: { userId: user.id, cardId: { in: Array.from(known) } },
-      select: { cardId: true, foil: true, language: true, condition: true, quantity: true },
-    });
-    const itemKey = (cardId: string, foil: string, language: string, condition: string) =>
-      `${cardId}|${foil}|${language}|${condition}`;
-    const existingMap = new Map(
-      existingItems.map((i) => [
-        itemKey(i.cardId, i.foil, i.language, i.condition),
-        i.quantity,
-      ]),
-    );
-
-    rows = parsed.rows.map((r) => {
-      const matched = known.has(r.scryfallId);
-      const card = matched ? cardMap.get(r.scryfallId) : null;
-      const existingQty = matched
-        ? existingMap.get(itemKey(r.scryfallId, r.foil, r.language, r.condition)) ?? 0
-        : 0;
-      return {
-        ...r,
-        matched,
-        existingQuantity: existingQty,
-        cardName: card?.name ?? null,
-        imageSmall: card?.imageSmall ?? null,
-        latestUsd: card?.latestUsd?.toString() ?? null,
-      };
-    });
+    rows = parsed.rows.map((r, idx) => ({ ...r, ...enriched[idx] }));
     errors = parsed.errors;
   } else if (format === "moxfield") {
     const parsed = parseMoxfieldTxt(text);
@@ -410,61 +227,66 @@ export async function applyImport(payload: string): Promise<ApplyResult> {
   const collectionId = await requireOwnedCollectionId(user.id, parsed.collectionId);
   if (!collectionId) return { ok: false, error: "Invalid collection" };
 
-  let inserted = 0;
-  let merged = 0;
+  // TODO(concurrency): existing keys are read outside the tx; concurrent applies can make skipDuplicates drop rows silently — mitigated by the UI double-submit guard; full fix is serializable isolation.
+  let existingKeys = new Set<string>();
+  if (parsed.mode === "add") {
+    const existingItems = await prisma.collectionItem.findMany({
+      where: { userId: user.id, collectionId, cardId: { in: ids } },
+      select: { cardId: true, foil: true, language: true, condition: true },
+    });
+    existingKeys = new Set(
+      existingItems.map((i) => itemKey(i.cardId, i.foil, i.language, i.condition)),
+    );
+  }
 
-  await prisma.$transaction(async (tx) => {
-    if (parsed.mode === "replace") {
-      await tx.collectionItem.deleteMany({
-        where: { userId: user.id, collectionId },
-      });
-    }
-    for (const r of valid) {
-      const existingItem =
-        parsed.mode === "add"
-          ? await tx.collectionItem.findUnique({
-              where: {
-                userId_collectionId_cardId_foil_language_condition: {
-                  userId: user.id,
-                  collectionId,
-                  cardId: r.scryfallId,
-                  foil: r.foil,
-                  language: r.language,
-                  condition: r.condition,
-                },
-              },
-              select: { id: true },
-            })
-          : null;
-      if (existingItem) merged++;
-      else inserted++;
-      await tx.collectionItem.upsert({
-        where: {
-          userId_collectionId_cardId_foil_language_condition: {
+  const plan = planImport(valid, existingKeys, parsed.mode);
+  const inserted = plan.inserted;
+  const merged = plan.merged;
+
+  await prisma.$transaction(
+    async (tx) => {
+      if (parsed.mode === "replace") {
+        await tx.collectionItem.deleteMany({
+          where: { userId: user.id, collectionId },
+        });
+      }
+
+      if (plan.toCreate.length > 0) {
+        await tx.collectionItem.createMany({
+          data: plan.toCreate.map((r) => ({
             userId: user.id,
             collectionId,
             cardId: r.scryfallId,
+            quantity: r.quantity,
             foil: r.foil,
             language: r.language,
             condition: r.condition,
+            acquiredPrice: r.acquiredPrice ?? undefined,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      for (const r of plan.toUpdate) {
+        await tx.collectionItem.update({
+          where: {
+            userId_collectionId_cardId_foil_language_condition: {
+              userId: user.id,
+              collectionId,
+              cardId: r.scryfallId,
+              foil: r.foil,
+              language: r.language,
+              condition: r.condition,
+            },
           },
-        },
-        create: {
-          userId: user.id,
-          collectionId,
-          cardId: r.scryfallId,
-          quantity: r.quantity,
-          foil: r.foil,
-          language: r.language,
-          condition: r.condition,
-          acquiredPrice: r.acquiredPrice ?? undefined,
-        },
-        update: {
-          quantity: { increment: r.quantity },
-        },
-      });
-    }
-  });
+          data: {
+            quantity: { increment: r.quantity },
+          },
+        });
+      }
+    },
+    { timeout: 30000 },
+  );
 
   // Write ImportLog
   await prisma.importLog.create({

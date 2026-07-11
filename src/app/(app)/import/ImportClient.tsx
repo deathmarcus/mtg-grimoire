@@ -111,6 +111,9 @@ export function ImportClient({
   }
 
   function onApply() {
+    // Double-submit guard: the button is disabled on isPending, but a rapid
+    // double-click can fire before React re-renders the disabled attribute.
+    if (isPending) return;
     if (!preview || !preview.ok) return;
     if (mode === "replace" && !confirmReplace) return;
     const payload = JSON.stringify({

@@ -30,6 +30,9 @@ export function DeckImportClient() {
   }
 
   function onApply() {
+    // Double-submit guard: the button is disabled on isPending, but a rapid
+    // double-click can fire before React re-renders the disabled attribute.
+    if (isPending) return;
     if (!preview) return;
     const payload = JSON.stringify({
       tag,
