@@ -3,8 +3,9 @@ import Image from "next/image";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { formatMoney, getLatestUsdToMxn } from "@/lib/money";
+import { formatMoney, getLatestFxRate } from "@/lib/money";
 import { pickPriceForFinish } from "@/lib/pricing";
+import { formatPriceProvenance, formatFxProvenance, latestDate } from "@/lib/price-provenance";
 import {
   parseColorsParam,
   parseRarityParam,
@@ -122,13 +123,13 @@ export default async function CollectionPage({
       ? { card: { latestUsd: { sort: "desc", nulls: "last" } } }
       : { card: { name: "asc" } };
 
-  const [items, rate] = await Promise.all([
+  const [items, { rate, date: fxDate }] = await Promise.all([
     prisma.collectionItem.findMany({
       where: whereClause,
       include: { card: true, collection: { select: { name: true } } },
       orderBy,
     }),
-    getLatestUsdToMxn(),
+    getLatestFxRate(),
   ]);
 
   let rows = items.map((it) => {
@@ -136,6 +137,10 @@ export default async function CollectionPage({
     const totalUsd = (priceUsd ?? 0) * it.quantity;
     return { it, priceUsd, totalUsd };
   });
+
+  const catalogDate = latestDate(items.map((it) => it.card.updatedAt));
+  const provenanceText = formatPriceProvenance("catalog", catalogDate, locale);
+  const fxText = currency === "MXN" ? formatFxProvenance(rate, fxDate, locale) : null;
 
   if (sort === "rarity") {
     rows = [...rows].sort((a, b) => {
@@ -323,6 +328,12 @@ export default async function CollectionPage({
             {formatMoney(totalValue, currency, rate)}
           </span>
         </span>
+        {rows.length > 0 && (
+          <span style={{ color: "var(--ink-3)" }} title={fxText ?? undefined}>
+            {provenanceText}
+            {fxText ? ` · ${fxText}` : ""}
+          </span>
+        )}
       </div>
 
       {/* Content */}
@@ -377,7 +388,7 @@ function GridView({
         <Link
           key={it.id}
           href={`/collection/${it.id}`}
-          className="coll-card"
+          className={`coll-card${it.foil !== "NORMAL" ? " is-foil" : ""}`}
         >
           <div className="card-art">
             {it.card.imageNormal ? (
@@ -395,12 +406,7 @@ function GridView({
               />
             )}
           </div>
-          {it.quantity > 1 && (
-            <div className="coll-card-qty">×{it.quantity}</div>
-          )}
-          {it.foil !== "NORMAL" && (
-            <div className="coll-card-foil">{it.foil}</div>
-          )}
+          <div className="coll-card-qty">×{it.quantity}</div>
           <div className="coll-card-meta">
             <div
               style={{
@@ -514,9 +520,13 @@ function TableView({
                 )}
                 <td className="num">{it.quantity}</td>
                 <td>
-                  <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                    {it.foil === "NORMAL" ? "—" : it.foil}
-                  </span>
+                  {it.foil === "NORMAL" ? (
+                    <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                      —
+                    </span>
+                  ) : (
+                    <span className="foil-chip">{it.foil}</span>
+                  )}
                 </td>
                 <td>
                   <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
@@ -584,11 +594,21 @@ function TableView({
               </div>
               <div
                 className="mono"
-                style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 2 }}
+                style={{
+                  fontSize: 10,
+                  color: "var(--ink-3)",
+                  marginTop: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  flexWrap: "wrap",
+                }}
               >
-                {it.card.setCode.toUpperCase()} · {it.quantity}× ·{" "}
-                {it.foil === "NORMAL" ? it.condition : `${it.foil} ${it.condition}`}
-                {showAll && ` · ${it.collection.name}`}
+                <span>
+                  {it.card.setCode.toUpperCase()} · {it.quantity}× · {it.condition}
+                  {showAll && ` · ${it.collection.name}`}
+                </span>
+                {it.foil !== "NORMAL" && <span className="foil-chip">{it.foil}</span>}
               </div>
             </div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>

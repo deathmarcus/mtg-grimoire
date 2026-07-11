@@ -3,9 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { formatMoney, getLatestUsdToMxn, toNumber } from "@/lib/money";
+import { formatMoney, getLatestFxRate, toNumber } from "@/lib/money";
 import { pickPriceForFinish } from "@/lib/pricing";
 import { parseLegalities } from "@/lib/card-detail";
+import { formatPriceProvenance, formatFxProvenance } from "@/lib/price-provenance";
 import { Sparkline } from "@/components/Sparkline";
 import { deleteCollectionItem, updateItemQuantity } from "../actions";
 import { DeleteButton } from "./DeleteButton";
@@ -14,6 +15,7 @@ import { InlineEditForm } from "./InlineEditForm";
 import { EditionsTab, type EditionRow } from "./EditionsTab";
 import { RulingsTab } from "./RulingsTab";
 import { IconEdit } from "@/components/Icons";
+import { t, type Locale } from "@/lib/i18n";
 
 export default async function ItemDetailPage({
   params,
@@ -38,12 +40,15 @@ export default async function ItemDetailPage({
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { displayCurrency: true },
+    select: { displayCurrency: true, locale: true },
   });
   const currency = dbUser?.displayCurrency ?? "USD";
-  const rate = await getLatestUsdToMxn();
+  const locale = (dbUser?.locale ?? "es") as Locale;
+  const { rate, date: fxDate } = await getLatestFxRate();
 
   const priceUsd = pickPriceForFinish(item.card, item.foil);
+  const provenanceText = formatPriceProvenance("catalog", item.card.updatedAt, locale);
+  const fxText = currency === "MXN" ? formatFxProvenance(rate, fxDate, locale) : null;
 
   // Other printings of the same card
   const otherPrintings = await prisma.card.findMany({
@@ -115,6 +120,15 @@ export default async function ItemDetailPage({
         </div>
       </div>
 
+      <div
+        className="mono"
+        style={{ fontSize: 10, color: "var(--ink-3)", display: "flex", flexDirection: "column", gap: 2 }}
+        title={fxText ?? undefined}
+      >
+        <span>{provenanceText}</span>
+        {fxText && <span>{fxText}</span>}
+      </div>
+
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <span className="chip">{item.foil}</span>
         <span className="chip">{item.language.toUpperCase()}</span>
@@ -178,11 +192,12 @@ export default async function ItemDetailPage({
       currency={currency}
       rate={rate}
       cardName={item.card.name}
+      locale={locale}
     />
   );
 
   const editionsPanel = (
-    <EditionsTab editions={editions} currency={currency} rate={rate} />
+    <EditionsTab editions={editions} currency={currency} rate={rate} locale={locale} />
   );
 
   const rulingsPanel = (
@@ -191,6 +206,7 @@ export default async function ItemDetailPage({
       typeLine={item.card.typeLine}
       manaCost={item.card.manaCost}
       legalities={legalities}
+      locale={locale}
     />
   );
 
@@ -302,11 +318,13 @@ function PriceHistorySection({
   currency,
   rate,
   cardName,
+  locale,
 }: {
   snapshots: { date: Date; usd: number | null }[];
   currency: "USD" | "MXN";
   rate: number;
   cardName: string;
+  locale: Locale;
 }) {
   const valid = snapshots.filter(
     (s): s is { date: Date; usd: number } => s.usd != null,
@@ -337,8 +355,7 @@ function PriceHistorySection({
       {valid.length === 0 ? (
         <div className="panel-body">
           <p style={{ color: "var(--ink-2)", fontSize: 13 }}>
-            No price snapshots yet. Run <code>npm run sync:weekly</code> to start
-            building history.
+            {t("detail.priceHistory.empty", locale)}
           </p>
         </div>
       ) : (

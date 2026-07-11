@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Currency } from "@prisma/client";
 import { formatMoney } from "@/lib/money-format";
 import { pickPriceForFinish } from "@/lib/pricing";
+import { t, type Locale } from "@/lib/i18n";
 
 export type EditionRow = {
   id: string;
@@ -19,16 +20,16 @@ type Props = {
   editions: EditionRow[];
   currency: Currency;
   rate: number;
+  locale: Locale;
 };
 
-export function EditionsTab({ editions, currency, rate }: Props) {
+export function EditionsTab({ editions, currency, rate, locale }: Props) {
   if (editions.length === 0) {
     return (
       <div className="panel">
         <div className="panel-body">
           <p style={{ color: "var(--ink-2)", fontSize: 13 }}>
-            No other printings of this card in the local catalog. Run{" "}
-            <code>npm run sync:catalog</code> to refresh.
+            {t("detail.editions.empty", locale)}
           </p>
         </div>
       </div>

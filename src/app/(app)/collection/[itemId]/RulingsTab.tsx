@@ -2,12 +2,14 @@ import {
   formatLegalityStatus,
   type Legality,
 } from "@/lib/card-detail";
+import { t, type Locale } from "@/lib/i18n";
 
 type Props = {
   oracleText: string | null;
   typeLine: string | null;
   manaCost: string | null;
   legalities: Legality[];
+  locale: Locale;
 };
 
 export function RulingsTab({
@@ -15,6 +17,7 @@ export function RulingsTab({
   typeLine,
   manaCost,
   legalities,
+  locale,
 }: Props) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -73,7 +76,7 @@ export function RulingsTab({
         <div className="panel-body">
           {legalities.length === 0 ? (
             <p style={{ color: "var(--ink-3)", fontSize: 13 }}>
-              No legality data. Run <code>npm run sync:catalog</code> to refresh.
+              {t("detail.legality.empty", locale)}
             </p>
           ) : (
             <div className="legality-grid">

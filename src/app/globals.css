@@ -514,16 +514,50 @@ textarea.grimoire-input:focus {
   backdrop-filter: blur(4px);
 }
 
-.coll-card-foil {
+/* Holographic foil indicator — a subtle rainbow-gradient ring around the
+   card art, replacing the old corner "FOIL" stripe. Pure CSS, no per-card
+   JS: the ring is a ::after pseudo-element masked to only paint the border
+   band, so the art underneath stays fully visible. */
+.coll-card.is-foil .card-art::after {
+  content: "";
   position: absolute;
-  top: 6px; left: 6px;
-  background: linear-gradient(135deg, oklch(0.75 0.15 30), oklch(0.75 0.15 280));
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(
+    135deg,
+    oklch(0.8 0.16 30),
+    oklch(0.8 0.16 100),
+    oklch(0.8 0.16 200),
+    oklch(0.8 0.16 320),
+    oklch(0.8 0.16 30)
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Compact holographic chip — foil/etched indicator for table + list rows,
+   same gradient family as the grid ring above. */
+.foil-chip {
+  display: inline-block;
+  background: linear-gradient(
+    135deg,
+    oklch(0.8 0.16 30),
+    oklch(0.8 0.16 100),
+    oklch(0.8 0.16 200),
+    oklch(0.8 0.16 320)
+  );
   color: oklch(0.15 0 0);
   font-family: var(--font-jetbrains-mono), monospace;
   font-size: 9px;
-  padding: 2px 5px;
-  border-radius: 2px;
-  letter-spacing: 0.1em;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.08em;
 }
 
 /* =========================================================================

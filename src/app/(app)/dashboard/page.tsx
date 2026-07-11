@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { formatMoney, getLatestUsdToMxn } from "@/lib/money";
+import { formatMoney, getLatestFxRate } from "@/lib/money";
 import {
   aggregateCollectionValue,
   pickPriceForFinish,
@@ -14,6 +14,7 @@ import {
   type ValuedItem,
 } from "@/lib/dashboard";
 import { getRecentActivity } from "@/lib/activity";
+import { formatPriceProvenance, formatFxProvenance, latestDate } from "@/lib/price-provenance";
 import { Sparkline } from "@/components/Sparkline";
 import { IconArrow } from "@/components/Icons";
 import { CardHoverPreview } from "@/components/CardHoverPreview";
@@ -24,12 +25,12 @@ import { t, type Locale } from "@/lib/i18n";
 export default async function DashboardPage() {
   const user = await requireUser();
 
-  const [items, rate, dbUser, snapshots, recentlyAdded, activity] = await Promise.all([
+  const [items, fx, dbUser, snapshots, recentlyAdded, activity] = await Promise.all([
     prisma.collectionItem.findMany({
       where: { userId: user.id },
       include: { card: true, collection: true },
     }),
-    getLatestUsdToMxn(),
+    getLatestFxRate(),
     prisma.user.findUnique({ where: { id: user.id }, select: { displayCurrency: true, locale: true } }),
     fetchOwnedSnapshots(user.id),
     prisma.collectionItem.findMany({
@@ -43,6 +44,11 @@ export default async function DashboardPage() {
 
   const currency = dbUser?.displayCurrency ?? "USD";
   const locale = (dbUser?.locale ?? "es") as Locale;
+  const rate = fx.rate;
+  const catalogDate = latestDate(items.map((it) => it.card.updatedAt));
+  const provenanceText =
+    catalogDate === null ? "" : formatPriceProvenance("catalog", catalogDate, locale);
+  const fxText = currency === "MXN" ? formatFxProvenance(rate, fx.date, locale) : null;
 
   const aggregateItems = items.map((it) => ({
     cardId: it.cardId,
@@ -137,7 +143,14 @@ export default async function DashboardPage() {
         className="dashboard-row"
         style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 18 }}
       >
-        <ValueChart history={valueHistory} currency={currency} rate={rate} />
+        <ValueChart
+          history={valueHistory}
+          currency={currency}
+          rate={rate}
+          locale={locale}
+          provenanceText={provenanceText}
+          fxText={fxText}
+        />
         <ActivityFeed entries={activity} />
       </div>
 
@@ -165,8 +178,7 @@ export default async function DashboardPage() {
           {topMovers.length === 0 ? (
             <div className="panel-body">
               <p style={{ color: "var(--ink-2)", fontSize: 13 }}>
-                Necesitamos al menos 2 snapshots para detectar movimientos.
-                Corre <code>npm run sync:weekly</code> para acumular histórico.
+                {t("page.dashboard.topMovers.empty", locale)}
               </p>
             </div>
           ) : (
@@ -361,7 +373,7 @@ export default async function DashboardPage() {
               <Link
                 key={it.id}
                 href={`/collection/${it.id}`}
-                className="coll-card"
+                className={`coll-card${it.foil !== "NORMAL" ? " is-foil" : ""}`}
                 aria-label={`${it.card.name}, ${it.quantity} copies`}
               >
                 <div className="card-art">
@@ -384,9 +396,7 @@ export default async function DashboardPage() {
                     />
                   )}
                 </div>
-                {it.quantity > 1 && (
-                  <div className="coll-card-qty">×{it.quantity}</div>
-                )}
+                <div className="coll-card-qty">×{it.quantity}</div>
                 <div className="coll-card-meta">
                   <div className="coll-card-name">{it.card.name}</div>
                   <div className="coll-card-price">

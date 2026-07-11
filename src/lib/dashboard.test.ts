@@ -5,6 +5,7 @@ import {
   aggregateValueByDate,
   filterValueHistoryByRange,
   computeTopMovers,
+  valueHistoryState,
   type SnapshotRow,
   type ValuedItem,
   type ValueHistoryPoint,
@@ -276,5 +277,20 @@ describe("computeTopMovers", () => {
     const result = computeTopMovers(items, snapshots);
     expect(result).toHaveLength(1);
     expect(result[0].latestUsd).toBe(12);
+  });
+});
+
+describe("valueHistoryState", () => {
+  it("returns 'empty' for zero points", () => {
+    expect(valueHistoryState(0)).toBe("empty");
+  });
+
+  it("returns 'building' for exactly one point", () => {
+    expect(valueHistoryState(1)).toBe("building");
+  });
+
+  it("returns 'ready' for two or more points", () => {
+    expect(valueHistoryState(2)).toBe("ready");
+    expect(valueHistoryState(50)).toBe("ready");
   });
 });

@@ -171,5 +171,19 @@ export function filterValueHistoryByRange(
   return history.filter((p) => p.date >= cutoffIso);
 }
 
+export type ValueHistoryState = "empty" | "building" | "ready";
+
+/**
+ * Classify a value-history series by point count so callers can render an
+ * appropriate empty/building/ready state instead of a misleading flat chart.
+ * A single point can't show a trend, so it's treated as "building" rather
+ * than "ready".
+ */
+export function valueHistoryState(pointCount: number): ValueHistoryState {
+  if (pointCount <= 0) return "empty";
+  if (pointCount === 1) return "building";
+  return "ready";
+}
+
 // Re-export toNumber so callers can normalize Decimal-like values from Prisma
 export { toNumber };
