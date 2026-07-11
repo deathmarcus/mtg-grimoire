@@ -9,6 +9,7 @@ import { logActivity } from "@/lib/activity";
 import { parseManaboxCsv, type ManaboxRow } from "@/lib/manabox";
 import { parseMoxfieldTxt } from "@/lib/deck-parser";
 import { parseArenaTxt } from "@/lib/arena-parser";
+import { isScryfallId } from "@/lib/scryfall-id";
 import {
   fetchJson,
   toCardRow,
@@ -17,6 +18,12 @@ import {
 } from "../../../../scripts/lib/scryfall";
 
 export type ImportFormat = "manabox" | "moxfield" | "arena";
+
+/** Max live Scryfall fetches performed per import (fallback for unknown cards). */
+const MAX_LIVE_FETCHES = 50;
+
+/** Max rows accepted in a single import payload. */
+const MAX_IMPORT_ROWS = 5000;
 
 export type PreviewRow = ManaboxRow & {
   matched: boolean;
@@ -59,11 +66,11 @@ async function ensureCardsExist(ids: string[]): Promise<Set<string>> {
     select: { id: true },
   });
   const have = new Set(existing.map((c) => c.id));
-  const missing = ids.filter((id) => !have.has(id));
+  const missing = ids.filter((id) => !have.has(id) && isScryfallId(id));
   if (missing.length === 0) return have;
 
-  // Live Scryfall fallback (respect ~10 req/s with 120ms gap).
-  for (const id of missing) {
+  // Live Scryfall fallback (respect ~10 req/s with 120ms gap), capped per import.
+  for (const id of missing.slice(0, MAX_LIVE_FETCHES)) {
     try {
       const card = await fetchJson<ScryfallCard>(`${SCRYFALL_API}/cards/${id}`);
       const { legalities, ...rest } = toCardRow(card);
@@ -151,7 +158,7 @@ async function resolveCardsBySetCollector(
     (r) => !result.has(`${r.setCode}|${r.collectorNumber}`),
   );
 
-  for (const row of afterNameFallback) {
+  for (const row of afterNameFallback.slice(0, MAX_LIVE_FETCHES)) {
     try {
       // Search Scryfall by name + set
       const searchUrl = `${SCRYFALL_API}/cards/named?exact=${encodeURIComponent(row.name)}&set=${encodeURIComponent(row.setCode)}`;
@@ -278,6 +285,9 @@ export async function previewImport(formData: FormData): Promise<PreviewResult> 
     if (parsed.rows.length === 0) {
       return { ok: false, error: "No valid rows found in CSV" };
     }
+    if (parsed.rows.length > MAX_IMPORT_ROWS) {
+      return { ok: false, error: `Too many rows (max ${MAX_IMPORT_ROWS})` };
+    }
     const ids = Array.from(new Set(parsed.rows.map((r) => r.scryfallId)));
     const known = await ensureCardsExist(ids);
 
@@ -321,6 +331,9 @@ export async function previewImport(formData: FormData): Promise<PreviewResult> 
     if (parsed.rows.length === 0) {
       return { ok: false, error: "No valid rows found in TXT file" };
     }
+    if (parsed.rows.length > MAX_IMPORT_ROWS) {
+      return { ok: false, error: `Too many rows (max ${MAX_IMPORT_ROWS})` };
+    }
     const preview = await previewDeckRows(parsed.rows, user.id);
     rows = preview.rows;
     errors = [...parsed.errors, ...preview.errors];
@@ -329,6 +342,9 @@ export async function previewImport(formData: FormData): Promise<PreviewResult> 
     const parsed = parseArenaTxt(text);
     if (parsed.length === 0) {
       return { ok: false, error: "No valid rows found in Arena export" };
+    }
+    if (parsed.length > MAX_IMPORT_ROWS) {
+      return { ok: false, error: `Too many rows (max ${MAX_IMPORT_ROWS})` };
     }
     const preview = await previewDeckRows(parsed, user.id);
     rows = preview.rows;
@@ -352,17 +368,19 @@ const applySchema = z.object({
   collectionId: z.string().min(1).optional(),
   format: z.enum(["manabox", "moxfield", "arena"]).default("manabox"),
   filename: z.string().default("import"),
-  rows: z.array(
-    z.object({
-      scryfallId: z.string().min(1),
-      quantity: z.number().int().min(1),
-      foil: z.enum(["NORMAL", "FOIL", "ETCHED"]),
-      condition: z.enum(["NM", "LP", "MP", "HP", "DMG"]),
-      language: z.string().min(1).max(8),
-      acquiredPrice: z.number().nullable(),
-      acquiredCurrency: z.string().nullable(),
-    }),
-  ),
+  rows: z
+    .array(
+      z.object({
+        scryfallId: z.string().min(1),
+        quantity: z.number().int().min(1),
+        foil: z.enum(["NORMAL", "FOIL", "ETCHED"]),
+        condition: z.enum(["NM", "LP", "MP", "HP", "DMG"]),
+        language: z.string().min(1).max(8),
+        acquiredPrice: z.number().nullable(),
+        acquiredCurrency: z.string().nullable(),
+      }),
+    )
+    .max(MAX_IMPORT_ROWS),
 });
 
 export type ApplyResult =

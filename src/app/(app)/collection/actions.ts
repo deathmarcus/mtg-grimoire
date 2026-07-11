@@ -110,12 +110,15 @@ export async function deleteCollectionItem(itemId: string) {
   revalidatePath("/dashboard");
 }
 
+const quantitySchema = z.coerce.number().int().min(1).max(9999);
+
 export async function updateItemQuantity(itemId: string, quantity: number) {
   const user = await requireUser();
-  if (quantity < 1) return deleteCollectionItem(itemId);
+  const parsed = quantitySchema.safeParse(quantity);
+  if (!parsed.success) return { error: "Invalid quantity" };
   await prisma.collectionItem.updateMany({
     where: { id: itemId, userId: user.id },
-    data: { quantity },
+    data: { quantity: parsed.data },
   });
   revalidatePath("/collection");
   revalidatePath(`/collection/${itemId}`);

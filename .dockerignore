@@ -1,0 +1,12 @@
+node_modules
+.git
+.next
+.env*
+!.env.example
+*.md
+*.png
+*.log
+cookies.txt
+docker-compose*.yml
+Caddyfile
+.claude
