@@ -64,7 +64,8 @@ export async function setListPrefs(
     data: { listPrefs: next as Prisma.InputJsonValue },
   });
 
-  revalidatePath("/collection");
-  revalidatePath("/decks/[deckId]", "page");
+  // Sin revalidatePath: la vista ya cambió optimista en el cliente y la pref
+  // solo importa en el próximo full-load; revalidar aquí refetchea toda la
+  // colección en cada clic del toolbar.
   return { ok: true };
 }
