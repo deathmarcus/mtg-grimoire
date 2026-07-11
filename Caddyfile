@@ -1,4 +1,6 @@
 mtg.marcocastaneda.dev {
 	encode zstd gzip
-	reverse_proxy web:3000
+	reverse_proxy web:3000 {
+		trusted_proxies private_ranges
+	}
 }

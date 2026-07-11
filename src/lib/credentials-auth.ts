@@ -16,6 +16,9 @@ export async function authorizeCredentials(raw: unknown, ip: string) {
   const parsed = credentialsSchema.safeParse(raw);
   if (!parsed.success) return null;
 
+  // Rate-limit key uses lowercase email (groups case variants) while findUnique
+  // uses the raw email — deliberate: stricter than the DB; login case-sensitivity
+  // is a pre-existing bug out of scope here.
   const email = parsed.data.email.toLowerCase();
   const fineKey = `login:${ip}:${email}`;
   const ipKey = `login-ip:${ip}`;

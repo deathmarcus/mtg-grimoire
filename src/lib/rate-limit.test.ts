@@ -1,8 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { checkRateLimit, resetRateLimit, getClientIp } from "./rate-limit";
+import {
+  checkRateLimit,
+  resetRateLimit,
+  getClientIp,
+  __resetRateLimitStore,
+  __rateLimitStoreSize,
+} from "./rate-limit";
 
 describe("checkRateLimit", () => {
   beforeEach(() => {
+    __resetRateLimitStore();
     vi.useFakeTimers();
   });
 
@@ -73,11 +80,34 @@ describe("checkRateLimit", () => {
     expect(checkRateLimit(keyA, { limit: 5, windowMs: 1000 }).allowed).toBe(false);
     expect(checkRateLimit(keyB, { limit: 5, windowMs: 1000 }).allowed).toBe(true);
   });
+
+  it("bounds the store size even when all keys are fresh (hard eviction)", () => {
+    const opts = { limit: 5, windowMs: 60 * 60 * 1000 };
+    for (let i = 0; i < 10_500; i++) {
+      checkRateLimit(`flood:${i}`, opts);
+    }
+    expect(__rateLimitStoreSize()).toBeLessThanOrEqual(10_000);
+  });
 });
 
 describe("getClientIp", () => {
-  it("prefers the first x-forwarded-for value", () => {
+  it("takes the rightmost x-forwarded-for value (appended by the trusted proxy)", () => {
     const headers = new Headers({ "x-forwarded-for": "1.2.3.4, 5.6.7.8" });
+    expect(getClientIp(headers)).toBe("5.6.7.8");
+  });
+
+  it("ignores client-spoofed leftmost values", () => {
+    const headers = new Headers({ "x-forwarded-for": "9.9.9.9, 203.0.113.7" });
+    expect(getClientIp(headers)).toBe("203.0.113.7");
+  });
+
+  it("handles a single x-forwarded-for value", () => {
+    const headers = new Headers({ "x-forwarded-for": "1.2.3.4" });
+    expect(getClientIp(headers)).toBe("1.2.3.4");
+  });
+
+  it("skips empty trailing segments", () => {
+    const headers = new Headers({ "x-forwarded-for": "1.2.3.4, " });
     expect(getClientIp(headers)).toBe("1.2.3.4");
   });
 

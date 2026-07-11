@@ -9,13 +9,14 @@ const { mockPrisma } = vi.hoisted(() => ({
 vi.mock("@/lib/prisma", () => ({ prisma: mockPrisma }));
 
 import { authorizeCredentials } from "./credentials-auth";
-import { resetRateLimit } from "./rate-limit";
+import { __resetRateLimitStore } from "./rate-limit";
 
 const PASSWORD = "correct-horse-battery-staple";
 let passwordHash: string;
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  __resetRateLimitStore();
   passwordHash = await bcrypt.hash(PASSWORD, 4);
   mockPrisma.user.findUnique.mockResolvedValue({
     id: "user-1",
@@ -88,7 +89,6 @@ describe("authorizeCredentials", () => {
 
   it("does not share the fine-grained limit across different emails on the same ip", async () => {
     const ip = "6.6.6.6";
-    resetRateLimit(`login-ip:${ip}`);
     for (let i = 0; i < 5; i++) {
       await authorizeCredentials({ email: "one@example.com", password: "wrong-password" }, ip);
     }
