@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
 import { requireUser } from "@/lib/session";
 import { getLatestFxRate } from "@/lib/money";
 import { formatMoney, toNumber } from "@/lib/money-format";
-import { compareCollectorNumbers, computeSetProgress } from "@/lib/sets";
+import { ALLOWED_SET_TYPES, compareCollectorNumbers, computeSetProgress } from "@/lib/sets";
 import { SetProgressBar } from "@/components/SetProgressBar";
 import { RarityDot } from "@/components/RarityDot";
 import { CardHoverPreview } from "@/components/CardHoverPreview";
@@ -61,6 +61,7 @@ export default async function SetDetailPage({
       WHERE ci."cardId" = c.id AND ci."userId" = ${user.id}
     ) qty ON true
     WHERE c."setCode" = ${setCode.toLowerCase()}
+      AND c."setType" = ANY(${ALLOWED_SET_TYPES}::text[])
       AND c.promo = false AND c.variation = false AND c.lang = 'en'
   `);
 
