@@ -116,6 +116,11 @@ model Card {
   legalities      Json?
   // Sync bookkeeping
   scryfallUpdatedAt DateTime?
+  // Set completion (F7): printing-level metadata from Scryfall
+  releasedAt      DateTime? @db.Date
+  setType         String?
+  promo           Boolean  @default(false)
+  variation       Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

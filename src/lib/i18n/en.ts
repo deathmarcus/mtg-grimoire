@@ -6,6 +6,7 @@ const en: Record<string, string> = {
   "nav.folders": "Folders",
   "nav.wishlist": "Wishlist",
   "nav.decks": "Decks",
+  "nav.sets": "Sets",
   "nav.search": "Search",
   "nav.stats": "Stats",
   "nav.addCard": "Add card",
@@ -107,6 +108,23 @@ const en: Record<string, string> = {
   "page.search.ownershipMissing": "Not owned",
   "page.search.ownershipWishlist": "On wishlist",
   "page.search.sort": "Sort",
+
+  // Sets (F7)
+  "page.sets.title": "Sets",
+  "page.sets.subtitle": "Collection progress by set",
+  "page.sets.sortDate": "Date",
+  "page.sets.sortProgress": "Progress",
+  "page.sets.empty": "No sets found to show.",
+  "page.sets.colSet": "Set",
+  "page.sets.colType": "Type",
+  "page.sets.colReleased": "Released",
+  "page.sets.colProgress": "Progress",
+  "page.sets.colValue": "Owned value",
+  "page.setDetail.missingOnly": "Missing only",
+  "page.setDetail.showAll": "Show all",
+  "page.setDetail.owned": "In collection",
+  "page.setDetail.missing": "Missing",
+  "page.setDetail.back": "← All sets",
 
   // Stats
   "page.stats.title": "Stats",

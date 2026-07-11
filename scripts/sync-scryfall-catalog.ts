@@ -84,7 +84,9 @@ async function upsertBatch(rows: CardRow[]) {
       ${r.foilAvailable}, ${r.nonfoilAvailable}, ${r.etchedAvailable},
       ${r.latestUsd}::numeric, ${r.latestUsdFoil}::numeric, ${r.latestUsdEtched}::numeric,
       ${r.legalities ? JSON.stringify(r.legalities) : null}::jsonb,
-      ${r.scryfallUpdatedAt}, NOW(), NOW()
+      ${r.scryfallUpdatedAt},
+      ${r.releasedAt}::date, ${r.setType}, ${r.promo}, ${r.variation},
+      NOW(), NOW()
     )`,
   );
 
@@ -98,7 +100,9 @@ async function upsertBatch(rows: CardRow[]) {
       "foilAvailable", "nonfoilAvailable", "etchedAvailable",
       "latestUsd", "latestUsdFoil", "latestUsdEtched",
       "legalities",
-      "scryfallUpdatedAt", "createdAt", "updatedAt"
+      "scryfallUpdatedAt",
+      "releasedAt", "setType", "promo", "variation",
+      "createdAt", "updatedAt"
     )
     VALUES ${Prisma.join(values)}
     ON CONFLICT ("id") DO UPDATE SET
@@ -126,6 +130,10 @@ async function upsertBatch(rows: CardRow[]) {
       "latestUsdEtched" = EXCLUDED."latestUsdEtched",
       "legalities"      = EXCLUDED."legalities",
       "scryfallUpdatedAt" = EXCLUDED."scryfallUpdatedAt",
+      "releasedAt"      = EXCLUDED."releasedAt",
+      "setType"         = EXCLUDED."setType",
+      "promo"           = EXCLUDED."promo",
+      "variation"       = EXCLUDED."variation",
       "updatedAt"       = NOW()
   `;
 }

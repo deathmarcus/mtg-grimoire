@@ -179,3 +179,13 @@ export function IconTrendUp({ size = 16, className }: Props) {
     </svg>
   );
 }
+
+export function IconSets({ size = 16, className }: Props) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <polygon points="12 2 22 8.5 12 15 2 8.5 12 2" />
+      <polyline points="2 15.5 12 22 22 15.5" />
+      <polyline points="2 12 12 18.5 22 12" />
+    </svg>
+  );
+}

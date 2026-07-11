@@ -6,6 +6,7 @@ const es: Record<string, string> = {
   "nav.folders": "Carpetas",
   "nav.wishlist": "Lista de deseos",
   "nav.decks": "Mazos",
+  "nav.sets": "Ediciones",
   "nav.search": "Buscar",
   "nav.stats": "Estadísticas",
   "nav.addCard": "Añadir carta",
@@ -107,6 +108,23 @@ const es: Record<string, string> = {
   "page.search.ownershipMissing": "Sin tener",
   "page.search.ownershipWishlist": "En wishlist",
   "page.search.sort": "Orden",
+
+  // Sets (F7)
+  "page.sets.title": "Ediciones",
+  "page.sets.subtitle": "Progreso de colección por edición",
+  "page.sets.sortDate": "Fecha",
+  "page.sets.sortProgress": "Progreso",
+  "page.sets.empty": "No encontramos ediciones para mostrar.",
+  "page.sets.colSet": "Edición",
+  "page.sets.colType": "Tipo",
+  "page.sets.colReleased": "Lanzamiento",
+  "page.sets.colProgress": "Progreso",
+  "page.sets.colValue": "Valor poseído",
+  "page.setDetail.missingOnly": "Solo faltantes",
+  "page.setDetail.showAll": "Mostrar todas",
+  "page.setDetail.owned": "En colección",
+  "page.setDetail.missing": "Falta",
+  "page.setDetail.back": "← Todas las ediciones",
 
   // Stats
   "page.stats.title": "Estadísticas",
