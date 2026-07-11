@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Image from "next/image";
 import type { Currency } from "@prisma/client";
 import { ManaCost } from "@/components/ManaCost";
+import { CardHoverPreview } from "@/components/CardHoverPreview";
 import { formatMoney } from "@/lib/money";
 import { removeCardFromDeck, updateDeckCard } from "../actions";
 import type { ClientDeckCard } from "./types";
@@ -463,17 +464,23 @@ function SideboardRow({
         +
       </button>
       <ManaCost cost={entry.card.manaCost} />
-      <span
-        style={{
-          flex: 1,
-          fontFamily: "var(--font-display)",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
+      <CardHoverPreview
+        imageUrl={entry.card.imageNormal}
+        cardName={entry.card.name}
+        style={{ flex: 1, minWidth: 0 }}
       >
-        {entry.card.name}
-      </span>
+        <span
+          style={{
+            fontFamily: "var(--font-display)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            display: "block",
+          }}
+        >
+          {entry.card.name}
+        </span>
+      </CardHoverPreview>
       <span
         style={{
           fontFamily: "var(--font-jetbrains-mono), monospace",

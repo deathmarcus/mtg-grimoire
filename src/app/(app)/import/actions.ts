@@ -27,6 +27,7 @@ export type PreviewRow = ManaboxRow & {
   existingQuantity: number;
   cardName: string | null;
   imageSmall: string | null;
+  imageNormal: string | null;
   latestUsd: string | null;
 };
 

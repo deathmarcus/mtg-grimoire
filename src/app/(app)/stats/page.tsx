@@ -44,6 +44,7 @@ export default async function StatsPage() {
             rarity: true,
             colorIdentity: true,
             imageSmall: true,
+            imageNormal: true,
             latestUsd: true,
             latestUsdFoil: true,
             latestUsdEtched: true,
@@ -138,6 +139,7 @@ export default async function StatsPage() {
     setCode: string;
     rarity: string;
     imageSmall: string | null;
+    imageNormal: string | null;
     foil: string;
     priceHistory: number[];
   };
@@ -153,6 +155,7 @@ export default async function StatsPage() {
       setCode: it.card.setCode,
       rarity: it.card.rarity,
       imageSmall: it.card.imageSmall,
+      imageNormal: it.card.imageNormal,
       foil: it.foil,
       quantity: it.quantity,
       latestUsd,
@@ -171,6 +174,7 @@ export default async function StatsPage() {
     quantity: v.quantity,
     latestUsd: v.latestUsd,
     imageSmall: v.imageSmall,
+    imageNormal: v.imageNormal,
     foil: v.foil,
     priceHistory: v.priceHistory,
   }));

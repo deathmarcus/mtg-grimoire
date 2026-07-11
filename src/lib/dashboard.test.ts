@@ -197,7 +197,7 @@ describe("computeTopMovers", () => {
     foil: TopMoverItem["foil"],
     name: string,
     setCode: string,
-  ): TopMoverItem => ({ cardId, foil, card: { name, setCode } });
+  ): TopMoverItem => ({ cardId, foil, card: { name, setCode, imageNormal: null } });
 
   it("returns empty when items empty", () => {
     expect(computeTopMovers([], [])).toEqual([]);
@@ -260,7 +260,7 @@ describe("computeTopMovers", () => {
     ];
     const result = computeTopMovers(items, snapshots);
     expect(result).toEqual([
-      { cardId: "card1", name: "Foily", setCode: "abc", latestUsd: 8, changePct: 60 },
+      { cardId: "card1", name: "Foily", setCode: "abc", imageNormal: null, latestUsd: 8, changePct: 60 },
     ]);
   });
 

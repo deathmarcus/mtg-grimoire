@@ -11,6 +11,7 @@ import {
 } from "./actions";
 import { createCollection } from "../collections/actions";
 import { IconPlus, IconImport } from "@/components/Icons";
+import { CardHoverPreview } from "@/components/CardHoverPreview";
 
 type CollectionOption = { id: string; name: string };
 
@@ -472,18 +473,20 @@ export function ImportClient({
                   <div style={{ width: 40, height: 56, background: "var(--bg-2)", borderRadius: 2 }} />
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontFamily: "var(--font-crimson-pro), Georgia, serif",
-                      fontSize: 13,
-                      color: "var(--ink-0)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {r.cardName ?? r.name}
-                  </div>
+                  <CardHoverPreview imageUrl={r.imageNormal ?? r.imageSmall} cardName={r.cardName ?? r.name}>
+                    <div
+                      style={{
+                        fontFamily: "var(--font-crimson-pro), Georgia, serif",
+                        fontSize: 13,
+                        color: "var(--ink-0)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {r.cardName ?? r.name}
+                    </div>
+                  </CardHoverPreview>
                   <div className="mono" style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 2 }}>
                     {r.setCode.toUpperCase()} #{r.collectorNumber} · {r.foil} · {r.condition} · {r.language}
                   </div>

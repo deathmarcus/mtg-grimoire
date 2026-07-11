@@ -16,6 +16,7 @@ import {
 import { getRecentActivity } from "@/lib/activity";
 import { Sparkline } from "@/components/Sparkline";
 import { IconArrow } from "@/components/Icons";
+import { CardHoverPreview } from "@/components/CardHoverPreview";
 import { ValueChart } from "./ValueChart";
 import { ActivityFeed } from "./ActivityFeed";
 import { t, type Locale } from "@/lib/i18n";
@@ -181,13 +182,17 @@ export default async function DashboardPage() {
               <tbody>
                 {topMovers.map((m) => (
                   <tr key={m.cardId}>
-                    <td
-                      style={{
-                        fontFamily: "var(--font-crimson-pro), serif",
-                        fontSize: 14,
-                      }}
-                    >
-                      {m.name}
+                    <td>
+                      <CardHoverPreview imageUrl={m.imageNormal} cardName={m.name}>
+                        <span
+                          style={{
+                            fontFamily: "var(--font-crimson-pro), serif",
+                            fontSize: 14,
+                          }}
+                        >
+                          {m.name}
+                        </span>
+                      </CardHoverPreview>
                     </td>
                     <td>
                       <span
@@ -297,18 +302,20 @@ export default async function DashboardPage() {
                         )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontFamily: "var(--font-crimson-pro), serif",
-                            fontSize: 14,
-                            color: "var(--ink-0)",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {it.card.name}
-                        </div>
+                        <CardHoverPreview imageUrl={it.card.imageNormal} cardName={it.card.name}>
+                          <div
+                            style={{
+                              fontFamily: "var(--font-crimson-pro), serif",
+                              fontSize: 14,
+                              color: "var(--ink-0)",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {it.card.name}
+                          </div>
+                        </CardHoverPreview>
                         <div
                           style={{
                             color: "var(--ink-3)",

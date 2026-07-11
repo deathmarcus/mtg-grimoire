@@ -21,7 +21,9 @@ describe("itemKey", () => {
 });
 
 describe("enrichRows", () => {
-  const cards = [{ id: "card-1", name: "Lightning Bolt", imageSmall: "img.png", latestUsd: "1.23" }];
+  const cards = [
+    { id: "card-1", name: "Lightning Bolt", imageSmall: "img.png", imageNormal: "img-normal.png", latestUsd: "1.23" },
+  ];
 
   it("marks unmatched rows (null cardId) as not matched with zero existing quantity", () => {
     const [row] = enrichRows([{ cardId: null, foil: "NORMAL", language: "en", condition: "NM" }], cards, []);
@@ -30,6 +32,7 @@ describe("enrichRows", () => {
       existingQuantity: 0,
       cardName: null,
       imageSmall: null,
+      imageNormal: null,
       latestUsd: null,
     });
   });
@@ -46,6 +49,7 @@ describe("enrichRows", () => {
       existingQuantity: 4,
       cardName: "Lightning Bolt",
       imageSmall: "img.png",
+      imageNormal: "img-normal.png",
       latestUsd: "1.23",
     });
   });
@@ -70,7 +74,9 @@ describe("loadCardsAndExistingItems", () => {
   });
 
   it("queries cards and existing items scoped to the user and given ids", async () => {
-    mockPrisma.card.findMany.mockResolvedValue([{ id: "card-1", name: "Bolt", imageSmall: null, latestUsd: null }]);
+    mockPrisma.card.findMany.mockResolvedValue([
+      { id: "card-1", name: "Bolt", imageSmall: null, imageNormal: null, latestUsd: null },
+    ]);
     mockPrisma.collectionItem.findMany.mockResolvedValue([]);
     const result = await loadCardsAndExistingItems("user-1", ["card-1"]);
     expect(mockPrisma.card.findMany).toHaveBeenCalledWith(

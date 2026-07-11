@@ -5,7 +5,7 @@ import { pickPriceForFinish } from "./pricing";
 export type TopMoverItem = {
   cardId: string;
   foil: FoilKind;
-  card: { name: string; setCode: string };
+  card: { name: string; setCode: string; imageNormal: string | null };
 };
 
 /**
@@ -50,6 +50,7 @@ export function computeTopMovers(
       cardId: it.cardId,
       name: it.card.name,
       setCode: it.card.setCode,
+      imageNormal: it.card.imageNormal,
       latestUsd,
       changePct,
     });
@@ -70,6 +71,7 @@ export type TopMoverInput = {
   cardId: string;
   name: string;
   setCode: string;
+  imageNormal: string | null;
   latestUsd: number | null;
   changePct: number | null;
 };

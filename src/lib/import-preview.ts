@@ -9,6 +9,7 @@ export type CardLookup = {
   id: string;
   name: string;
   imageSmall: string | null;
+  imageNormal: string | null;
   latestUsd: unknown;
 };
 
@@ -32,6 +33,7 @@ export type EnrichedFields = {
   existingQuantity: number;
   cardName: string | null;
   imageSmall: string | null;
+  imageNormal: string | null;
   latestUsd: string | null;
 };
 
@@ -63,6 +65,7 @@ export function enrichRows(
       existingQuantity,
       cardName: card?.name ?? null,
       imageSmall: card?.imageSmall ?? null,
+      imageNormal: card?.imageNormal ?? null,
       latestUsd: card?.latestUsd != null ? String(card.latestUsd) : null,
     };
   });
@@ -80,7 +83,7 @@ export async function loadCardsAndExistingItems(
   const [cards, existingItems] = await Promise.all([
     prisma.card.findMany({
       where: { id: { in: ids } },
-      select: { id: true, name: true, imageSmall: true, latestUsd: true },
+      select: { id: true, name: true, imageSmall: true, imageNormal: true, latestUsd: true },
     }),
     prisma.collectionItem.findMany({
       where: { userId, cardId: { in: ids } },
