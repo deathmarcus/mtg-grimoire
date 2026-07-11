@@ -473,7 +473,7 @@ export function ImportClient({
                   <div style={{ width: 40, height: 56, background: "var(--bg-2)", borderRadius: 2 }} />
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <CardHoverPreview imageUrl={r.imageSmall} cardName={r.cardName ?? r.name}>
+                  <CardHoverPreview imageUrl={r.imageNormal ?? r.imageSmall} cardName={r.cardName ?? r.name}>
                     <div
                       style={{
                         fontFamily: "var(--font-crimson-pro), Georgia, serif",

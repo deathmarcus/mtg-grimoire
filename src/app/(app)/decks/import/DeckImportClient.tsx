@@ -351,7 +351,7 @@ function PreviewRowItem({
         )}
       </td>
       <td>
-        <CardHoverPreview imageUrl={row.imageSmall} cardName={row.cardName ?? row.name}>
+        <CardHoverPreview imageUrl={row.imageNormal ?? row.imageSmall} cardName={row.cardName ?? row.name}>
           <span style={{ fontFamily: "var(--font-display)", fontSize: 14 }}>
             {row.cardName ?? row.name}
           </span>

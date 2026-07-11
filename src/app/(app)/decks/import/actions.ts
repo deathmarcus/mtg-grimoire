@@ -25,6 +25,7 @@ export type DeckPreviewRow = {
   cardId: string | null;
   cardName: string | null;
   imageSmall: string | null;
+  imageNormal: string | null;
   latestUsd: string | null;
   matched: boolean;
 };
@@ -60,7 +61,7 @@ export async function previewDeckImport(formData: FormData): Promise<DeckPreview
     resolvedIds.length > 0
       ? await prisma.card.findMany({
           where: { id: { in: resolvedIds } },
-          select: { id: true, name: true, imageSmall: true, latestUsd: true },
+          select: { id: true, name: true, imageSmall: true, imageNormal: true, latestUsd: true },
         })
       : [];
   const cardMap = new Map(cards.map((c) => [c.id, c]));
@@ -79,6 +80,7 @@ export async function previewDeckImport(formData: FormData): Promise<DeckPreview
       cardId,
       cardName: card?.name ?? null,
       imageSmall: card?.imageSmall ?? null,
+      imageNormal: card?.imageNormal ?? null,
       latestUsd: card?.latestUsd?.toString() ?? null,
       matched: cardId != null,
     };
