@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { requireOwnedCollectionId } from "@/lib/collections";
 import { logActivity } from "@/lib/activity";
+import { planBulkEdit, type BulkItemSnapshot, type ExistingItem } from "@/lib/bulk-edit";
+import { LANGUAGES } from "@/lib/languages";
 
 const addSchema = z.object({
   cardId: z.string().min(1),
@@ -269,4 +271,182 @@ export async function replacePrinting(
   revalidatePath(`/collection/${itemId}`);
   revalidatePath("/dashboard");
   return { ok: true, merged: false, redirectTo: `/collection/${itemId}` };
+}
+
+// ── Bulk edit (issue #22) ───────────────────────────────────────────────────
+
+const bulkIdsSchema = z.array(z.string().min(1)).min(1).max(1000);
+
+const bulkChangeSchema = z
+  .object({
+    collectionId: z.string().min(1).optional(),
+    foil: z.enum(["NORMAL", "FOIL", "ETCHED"]).optional(),
+    language: z
+      .string()
+      .trim()
+      .refine((v) => LANGUAGES.some(([code]) => code === v), {
+        message: "Unknown language",
+      })
+      .optional(),
+    condition: z.enum(["NM", "LP", "MP", "HP", "DMG"]).optional(),
+  })
+  .refine(
+    (v) =>
+      v.collectionId !== undefined ||
+      v.foil !== undefined ||
+      v.language !== undefined ||
+      v.condition !== undefined,
+    { message: "No fields to update" },
+  );
+
+export type BulkChangeInput = z.infer<typeof bulkChangeSchema>;
+
+export type BulkUpdateResult =
+  | { ok: true; updated: number; merged: number }
+  | { ok: false; error: string };
+
+export async function bulkUpdateItems(
+  itemIds: string[],
+  change: BulkChangeInput,
+): Promise<BulkUpdateResult> {
+  const user = await requireUser();
+
+  const idsParsed = bulkIdsSchema.safeParse(itemIds);
+  if (!idsParsed.success) return { ok: false, error: "Invalid selection" };
+
+  const changeParsed = bulkChangeSchema.safeParse(change);
+  if (!changeParsed.success) return { ok: false, error: "No changes to apply" };
+  const d = changeParsed.data;
+
+  let targetCollectionId: string | undefined;
+  if (d.collectionId !== undefined) {
+    const owned = await requireOwnedCollectionId(user.id, d.collectionId);
+    if (!owned) return { ok: false, error: "Invalid collection" };
+    targetCollectionId = owned;
+  }
+
+  const selected = await prisma.collectionItem.findMany({
+    where: { id: { in: idsParsed.data }, userId: user.id },
+    select: {
+      id: true,
+      cardId: true,
+      collectionId: true,
+      foil: true,
+      language: true,
+      condition: true,
+      quantity: true,
+    },
+  });
+  if (selected.length === 0) return { ok: false, error: "Not found" };
+
+  const cardIds = [...new Set(selected.map((s) => s.cardId))];
+  const existing = await prisma.collectionItem.findMany({
+    where: {
+      userId: user.id,
+      cardId: { in: cardIds },
+      id: { notIn: selected.map((s) => s.id) },
+    },
+    select: {
+      id: true,
+      cardId: true,
+      collectionId: true,
+      foil: true,
+      language: true,
+      condition: true,
+    },
+  });
+
+  const plan = planBulkEdit(
+    selected as BulkItemSnapshot[],
+    {
+      collectionId: targetCollectionId,
+      foil: d.foil,
+      language: d.language,
+      condition: d.condition,
+    },
+    existing as ExistingItem[],
+  );
+
+  // Los deletes van PRIMERO: liberan la clave del unique index antes de que
+  // el update del survivor la ocupe (si van después, Postgres valida por
+  // sentencia y el update revienta con 23505 dentro de la tx).
+  const ops = [
+    ...(plan.deletedIds.length > 0
+      ? [
+          prisma.collectionItem.deleteMany({
+            where: { id: { in: plan.deletedIds }, userId: user.id },
+          }),
+        ]
+      : []),
+    ...plan.fieldUpdates.map((op) =>
+      prisma.collectionItem.update({
+        where: { id: op.id },
+        data: {
+          collectionId: op.collectionId,
+          foil: op.foil,
+          language: op.language,
+          condition: op.condition,
+        },
+      }),
+    ),
+    ...plan.survivorUpdates.map((op) =>
+      prisma.collectionItem.update({
+        where: { id: op.id },
+        data: {
+          collectionId: op.collectionId,
+          foil: op.foil,
+          language: op.language,
+          condition: op.condition,
+          quantity: op.quantity,
+        },
+      }),
+    ),
+    ...plan.existingIncrements.map((op) =>
+      prisma.collectionItem.update({
+        where: { id: op.id },
+        data: { quantity: { increment: op.incrementBy } },
+      }),
+    ),
+  ];
+
+  if (ops.length > 0) {
+    await prisma.$transaction(ops);
+  }
+
+  const merged = plan.survivorUpdates.length + plan.existingIncrements.length;
+  await logActivity(user.id, "bulk_update", { count: selected.length, merged });
+
+  revalidatePath("/collection");
+  revalidatePath("/dashboard");
+  return { ok: true, updated: selected.length, merged };
+}
+
+export type BulkDeleteResult =
+  | { ok: true; deleted: number }
+  | { ok: false; error: string };
+
+export async function bulkDeleteItems(itemIds: string[]): Promise<BulkDeleteResult> {
+  const user = await requireUser();
+
+  const idsParsed = bulkIdsSchema.safeParse(itemIds);
+  if (!idsParsed.success) return { ok: false, error: "Invalid selection" };
+
+  const selected = await prisma.collectionItem.findMany({
+    where: { id: { in: idsParsed.data }, userId: user.id },
+    select: { id: true, quantity: true },
+  });
+  if (selected.length === 0) return { ok: false, error: "Not found" };
+
+  await prisma.$transaction([
+    prisma.collectionItem.deleteMany({
+      where: { id: { in: selected.map((s) => s.id) }, userId: user.id },
+    }),
+  ]);
+
+  const totalQuantity = selected.reduce((sum, s) => sum + s.quantity, 0);
+  await logActivity(user.id, "bulk_delete", { count: selected.length, totalQuantity });
+
+  revalidatePath("/collection");
+  revalidatePath("/dashboard");
+  return { ok: true, deleted: selected.length };
 }

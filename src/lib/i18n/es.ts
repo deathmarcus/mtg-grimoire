@@ -56,6 +56,18 @@ const es: Record<string, string> = {
   "list.sort.cmc": "CMC",
   "list.sort.quantity": "Cantidad",
 
+  // Bulk edit (/collection multi-select)
+  "bulk.selected": "seleccionadas",
+  "bulk.selectAllFiltered": "Seleccionar todo",
+  "bulk.clearSelection": "Limpiar selección",
+  "bulk.noChange": "— sin cambios —",
+  "bulk.moveToFolder": "Mover a carpeta",
+  "bulk.applyChanges": "Aplicar cambios",
+  "bulk.deleteSelected": "Eliminar",
+  "bulk.deleteConfirm": "¿Eliminar {count} cartas de tu colección? Esta acción no se puede deshacer.",
+  "bulk.applyError": "No se pudieron aplicar los cambios.",
+  "bulk.mergedNotice": "{merged} filas se combinaron con cartas existentes.",
+
   // Import
   "page.import.title": "Importar colección",
   "page.import.description": "Sube un archivo CSV de Manabox, TXT de Moxfield, o TXT de MTG Arena para añadir cartas a tu colección.",

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { updateCollectionItem } from "../actions";
 import type { Condition, FoilKind } from "@prisma/client";
+import { LANGUAGES } from "@/lib/languages";
 
 type Props = {
   itemId: string;
@@ -18,19 +19,6 @@ type Props = {
 };
 
 const CONDITIONS: Condition[] = ["NM", "LP", "MP", "HP", "DMG"];
-const LANGUAGES: Array<[string, string]> = [
-  ["en", "English"],
-  ["es", "Spanish"],
-  ["pt", "Portuguese"],
-  ["fr", "French"],
-  ["de", "German"],
-  ["it", "Italian"],
-  ["ja", "Japanese"],
-  ["ko", "Korean"],
-  ["zhs", "Chinese (S)"],
-  ["zht", "Chinese (T)"],
-  ["ru", "Russian"],
-];
 
 export function InlineEditForm({ itemId, initial }: Props) {
   const [editing, setEditing] = useState(false);

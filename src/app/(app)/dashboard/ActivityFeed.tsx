@@ -3,6 +3,7 @@ import {
   IconImport,
   IconWishlist,
   IconTrash,
+  IconEdit,
 } from "@/components/Icons";
 import type {
   ActivityEntry,
@@ -10,6 +11,8 @@ import type {
   DeletePayload,
   ImportPayload,
   WishlistAddPayload,
+  BulkUpdatePayload,
+  BulkDeletePayload,
 } from "@/lib/activity";
 
 function formatRelative(date: Date, now = new Date()): string {
@@ -160,6 +163,34 @@ function describeActivity(entry: ActivityEntry): Described {
             Agregaste{" "}
             <span style={{ color: "var(--accent)" }}>{p.cardName}</span> a la
             wishlist
+          </>
+        ),
+      };
+    }
+    case "bulk_update": {
+      const p = entry.payload as BulkUpdatePayload;
+      return {
+        icon: <IconEdit size={12} />,
+        color: "var(--accent)",
+        body: (
+          <>
+            Editaste en lote{" "}
+            <span style={{ color: "var(--accent)" }}>{p.count}</span> cartas
+            {p.merged > 0 ? ` (${p.merged} combinadas)` : ""}
+          </>
+        ),
+      };
+    }
+    case "bulk_delete": {
+      const p = entry.payload as BulkDeletePayload;
+      return {
+        icon: <IconTrash size={12} />,
+        color: "var(--neg)",
+        body: (
+          <>
+            Eliminaste en lote{" "}
+            <span style={{ color: "var(--ink-1)" }}>{p.count}</span> cartas
+            {p.totalQuantity !== p.count ? ` (×${p.totalQuantity})` : ""}
           </>
         ),
       };

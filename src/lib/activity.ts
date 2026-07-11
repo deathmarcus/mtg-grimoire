@@ -5,7 +5,9 @@ export type ActivityType =
   | "add"
   | "delete"
   | "import"
-  | "wishlist_add";
+  | "wishlist_add"
+  | "bulk_update"
+  | "bulk_delete";
 
 export type AddPayload = {
   cardId: string;
@@ -34,11 +36,25 @@ export type WishlistAddPayload = {
   quantityWanted: number;
 };
 
+/** Aggregate payload for a single bulkUpdateItems call — one row per selection, not per card. */
+export type BulkUpdatePayload = {
+  count: number;
+  merged: number;
+};
+
+/** Aggregate payload for a single bulkDeleteItems call. */
+export type BulkDeletePayload = {
+  count: number;
+  totalQuantity: number;
+};
+
 export type ActivityPayload =
   | AddPayload
   | DeletePayload
   | ImportPayload
-  | WishlistAddPayload;
+  | WishlistAddPayload
+  | BulkUpdatePayload
+  | BulkDeletePayload;
 
 export async function logActivity(
   userId: string,
