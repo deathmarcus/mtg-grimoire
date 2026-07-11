@@ -7,6 +7,8 @@ import { toNumber } from "@/lib/money-format";
 import { checkDeckLegality } from "@/lib/deck-legality";
 import { DeckBuilder } from "./DeckBuilder";
 import { DeleteDeckButton } from "./DeleteDeckButton";
+import { ExportButtons } from "../../ExportButtons";
+import { type Locale } from "@/lib/i18n";
 
 type PageProps = { params: Promise<{ deckId: string }> };
 
@@ -16,9 +18,10 @@ export default async function DeckDetailPage({ params }: PageProps) {
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { displayCurrency: true },
+    select: { displayCurrency: true, locale: true },
   });
   const currency = dbUser?.displayCurrency ?? "USD";
+  const locale = (dbUser?.locale ?? "es") as Locale;
   const rate = await getLatestUsdToMxn();
 
   const deck = await prisma.deck.findFirst({
@@ -194,6 +197,7 @@ export default async function DeckDetailPage({ params }: PageProps) {
               </div>
             </div>
 
+            <ExportButtons type="deck" deckId={deckId} locale={locale} />
             <DeleteDeckButton deckId={deckId} />
           </div>
         </div>

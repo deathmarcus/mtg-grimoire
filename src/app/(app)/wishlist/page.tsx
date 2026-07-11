@@ -9,6 +9,7 @@ import { toNumber } from "@/lib/money-format";
 import { IconPlus, IconSearch } from "@/components/Icons";
 import { WishlistCard } from "./WishlistCard";
 import { WishlistViewToggle } from "./WishlistViewToggle";
+import { ExportButtons } from "../ExportButtons";
 import { t, type Locale } from "@/lib/i18n";
 
 type SearchParams = Promise<{ q?: string; tag?: string; view?: string }>;
@@ -108,6 +109,7 @@ export default async function WishlistPage({
           <Link href="/wishlist/import" className="btn btn-ghost btn-sm">
             Import deck
           </Link>
+          <ExportButtons type="wishlist" locale={locale} />
         </div>
       </div>
 

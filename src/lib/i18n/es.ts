@@ -99,6 +99,8 @@ const es: Record<string, string> = {
   "action.preview": "Vista previa",
   "action.replace": "Reemplazar",
   "action.import": "Importar",
+  "action.exportCsv": "Exportar CSV",
+  "action.exportJson": "Exportar JSON",
   "action.signOut": "Cerrar sesión",
 
   // Labels

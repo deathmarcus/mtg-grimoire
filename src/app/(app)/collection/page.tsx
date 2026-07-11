@@ -16,6 +16,7 @@ import {
   type SortKey,
 } from "@/lib/collection-filters";
 import { ViewToggle } from "./ViewToggle";
+import { ExportButtons } from "../ExportButtons";
 import { IconSearch } from "@/components/Icons";
 import { RarityDot } from "@/components/RarityDot";
 import { ManaCost } from "@/components/ManaCost";
@@ -189,6 +190,7 @@ export default async function CollectionPage({
 
           <div style={{ flex: 1 }} />
 
+          <ExportButtons type="collection" locale={locale} />
           <Link href="/collection/new" className="btn btn-primary btn-sm">
             ＋ {t("action.add", locale)}
           </Link>
