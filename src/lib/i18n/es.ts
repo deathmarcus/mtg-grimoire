@@ -85,6 +85,21 @@ const es: Record<string, string> = {
   "page.stats.rarityDist": "Distribución por rareza",
   "page.stats.mostValuable": "Más valiosas",
 
+  // Price provenance
+  "price.provenance.source": "TCGplayer market vía Scryfall",
+  "price.provenance.snapshot": "snapshot {date}",
+  "price.provenance.catalog": "catálogo {date}",
+  "price.provenance.noDate": "fecha no disponible",
+  "price.provenance.fx": "FX {rate} MXN/USD · {date}",
+
+  // Empty / building states (no npm references — user-facing copy)
+  "chart.value.empty": "Aún no hay historial de precios. Vuelve la próxima semana para ver la evolución de tu colección.",
+  "chart.value.building": "Historial en construcción — con más snapshots semanales verás la tendencia aquí.",
+  "page.dashboard.topMovers.empty": "Necesitamos al menos dos snapshots de precio para detectar movimientos. Vuelve la próxima semana.",
+  "detail.editions.empty": "Aún no encontramos otras ediciones de esta carta en el catálogo.",
+  "detail.legality.empty": "Aún no hay datos de legalidad para esta carta.",
+  "detail.priceHistory.empty": "Aún no hay historial de precios para esta carta. Vuelve la próxima semana.",
+
   // Actions
   "action.save": "Guardar",
   "action.cancel": "Cancelar",

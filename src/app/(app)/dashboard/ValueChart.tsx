@@ -4,10 +4,12 @@ import { useState, useMemo } from "react";
 import { Sparkline } from "@/components/Sparkline";
 import {
   filterValueHistoryByRange,
+  valueHistoryState,
   type Range,
   type ValueHistoryPoint,
 } from "@/lib/dashboard";
 import { formatMoney } from "@/lib/money-format";
+import { t, type Locale } from "@/lib/i18n";
 import type { Currency } from "@prisma/client";
 
 const RANGES: Range[] = ["1m", "3m", "6m", "1y", "all"];
@@ -24,6 +26,9 @@ type Props = {
   currency: Currency;
   rate: number;
   defaultRange?: Range;
+  locale: Locale;
+  provenanceText?: string;
+  fxText?: string | null;
 };
 
 export function ValueChart({
@@ -31,6 +36,9 @@ export function ValueChart({
   currency,
   rate,
   defaultRange = "1y",
+  locale,
+  provenanceText,
+  fxText,
 }: Props) {
   const [range, setRange] = useState<Range>(defaultRange);
 
@@ -53,6 +61,16 @@ export function ValueChart({
           <div className="panel-title" style={{ marginTop: 4 }}>
             {formatMoney(latestValue, currency, rate)}
           </div>
+          {provenanceText && (
+            <div
+              className="mono"
+              style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 4 }}
+              title={fxText ?? undefined}
+            >
+              {provenanceText}
+              {fxText ? ` · ${fxText}` : ""}
+            </div>
+          )}
         </div>
         <div style={{ display: "flex", gap: 4 }}>
           {RANGES.map((r) => (
@@ -69,7 +87,7 @@ export function ValueChart({
         </div>
       </div>
       <div style={{ padding: 20, height: 220 }}>
-        {values.length === 0 ? (
+        {valueHistoryState(values.length) !== "ready" ? (
           <p
             style={{
               color: "var(--ink-2)",
@@ -78,8 +96,9 @@ export function ValueChart({
               paddingTop: 80,
             }}
           >
-            Sin snapshots en este rango. Corre <code>npm run sync:weekly</code>{" "}
-            para empezar a llenar el histórico.
+            {values.length === 1
+              ? t("chart.value.building", locale)
+              : t("chart.value.empty", locale)}
           </p>
         ) : (
           <Sparkline

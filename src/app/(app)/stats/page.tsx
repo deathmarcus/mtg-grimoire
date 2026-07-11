@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { getLatestUsdToMxn } from "@/lib/money";
+import { getLatestFxRate } from "@/lib/money";
 import { toNumber } from "@/lib/money-format";
 import { pickPriceForFinish } from "@/lib/pricing";
+import { formatPriceProvenance, formatFxProvenance, latestDate } from "@/lib/price-provenance";
 import {
   aggregateValueByDate,
   type SnapshotRow,
@@ -28,7 +29,7 @@ export default async function StatsPage() {
   const user = await requireUser();
 
   // Fetch user preferences + collection items with card data
-  const [dbUser, items, rate] = await Promise.all([
+  const [dbUser, items, fx] = await Promise.all([
     prisma.user.findUnique({
       where: { id: user.id },
       select: { displayCurrency: true, locale: true },
@@ -48,16 +49,21 @@ export default async function StatsPage() {
             latestUsd: true,
             latestUsdFoil: true,
             latestUsdEtched: true,
+            updatedAt: true,
           },
         },
         collection: { select: { excludeFromTotals: true } },
       },
     }),
-    getLatestUsdToMxn(),
+    getLatestFxRate(),
   ]);
 
   const currency = dbUser?.displayCurrency ?? "USD";
   const locale = (dbUser?.locale ?? "es") as Locale;
+  const rate = fx.rate;
+  const catalogDate = latestDate(items.map((it) => it.card.updatedAt));
+  const provenanceText = formatPriceProvenance("catalog", catalogDate, locale);
+  const fxText = currency === "MXN" ? formatFxProvenance(rate, fx.date, locale) : null;
 
   // --------------------------------------------------------------------------
   // Value history (reuses dashboard logic — all owned snapshots)
@@ -186,6 +192,9 @@ export default async function StatsPage() {
         history={valueHistory}
         currency={currency}
         rate={rate}
+        locale={locale}
+        provenanceText={provenanceText}
+        fxText={fxText}
       />
 
       {/* Color dist + Rarity dist — 2-col grid */}

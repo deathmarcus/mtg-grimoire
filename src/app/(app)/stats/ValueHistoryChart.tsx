@@ -4,10 +4,12 @@ import { useState, useMemo } from "react";
 import { Sparkline } from "@/components/Sparkline";
 import {
   filterValueHistoryByRange,
+  valueHistoryState,
   type Range,
   type ValueHistoryPoint,
 } from "@/lib/dashboard";
 import { formatMoney } from "@/lib/money-format";
+import { t, type Locale } from "@/lib/i18n";
 import type { Currency } from "@prisma/client";
 
 // Stats page uses a wider range set than the dashboard (adds 1W)
@@ -26,9 +28,19 @@ type Props = {
   history: ValueHistoryPoint[];
   currency: Currency;
   rate: number;
+  locale: Locale;
+  provenanceText?: string;
+  fxText?: string | null;
 };
 
-export function ValueHistoryChart({ history, currency, rate }: Props) {
+export function ValueHistoryChart({
+  history,
+  currency,
+  rate,
+  locale,
+  provenanceText,
+  fxText,
+}: Props) {
   const [range, setRange] = useState<StatsRange>("1y");
 
   const filtered = useMemo(
@@ -84,6 +96,16 @@ export function ValueHistoryChart({ history, currency, rate }: Props) {
               </span>
             </div>
           )}
+          {provenanceText && (
+            <div
+              className="mono"
+              style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 6 }}
+              title={fxText ?? undefined}
+            >
+              {provenanceText}
+              {fxText ? ` · ${fxText}` : ""}
+            </div>
+          )}
         </div>
         <div style={{ display: "flex", gap: 4 }}>
           {RANGES.map((r) => (
@@ -100,7 +122,7 @@ export function ValueHistoryChart({ history, currency, rate }: Props) {
         </div>
       </div>
       <div style={{ padding: 20, height: 280 }}>
-        {values.length === 0 ? (
+        {valueHistoryState(values.length) !== "ready" ? (
           <p
             style={{
               color: "var(--ink-2)",
@@ -109,9 +131,9 @@ export function ValueHistoryChart({ history, currency, rate }: Props) {
               paddingTop: 100,
             }}
           >
-            Sin snapshots en este rango. Corre{" "}
-            <code>npm run sync:weekly</code> para empezar a llenar el
-            histórico.
+            {values.length === 1
+              ? t("chart.value.building", locale)
+              : t("chart.value.empty", locale)}
           </p>
         ) : (
           <Sparkline
