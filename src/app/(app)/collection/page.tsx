@@ -328,7 +328,7 @@ export default async function CollectionPage({
       {rows.length === 0 ? (
         <div className="panel" style={{ textAlign: "center", padding: "48px 20px" }}>
           <p style={{ color: "var(--ink-2)", fontSize: 14, marginBottom: 20 }}>
-            {sp.q || colors.length > 0 || rarity ? t("page.collection.empty", locale) : t("page.collection.empty", locale)}
+            {t("page.collection.empty", locale)}
           </p>
           {!sp.q && colors.length === 0 && !rarity && (
             <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>

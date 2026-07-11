@@ -2,6 +2,61 @@ import type { FoilKind } from "@prisma/client";
 import { toNumber } from "./money-format";
 import { pickPriceForFinish } from "./pricing";
 
+export type TopMoverItem = {
+  cardId: string;
+  foil: FoilKind;
+  card: { name: string; setCode: string };
+};
+
+/**
+ * Compute top movers: per owned printing, compare the latest two price
+ * snapshots (for the item's finish) and rank by absolute % change.
+ */
+export function computeTopMovers(
+  items: TopMoverItem[],
+  snapshots: SnapshotRow[],
+): TopMoverInput[] {
+  if (items.length === 0 || snapshots.length === 0) return [];
+
+  // Group snapshots by cardId, sorted ascending by date (input order preserved).
+  const byCard = new Map<string, SnapshotRow[]>();
+  for (const s of snapshots) {
+    const list = byCard.get(s.cardId) ?? [];
+    list.push(s);
+    byCard.set(s.cardId, list);
+  }
+
+  // De-dupe by cardId — top movers is per printing, not per item row.
+  const seen = new Set<string>();
+  const inputs: TopMoverInput[] = [];
+  for (const it of items) {
+    if (seen.has(it.cardId)) continue;
+    seen.add(it.cardId);
+    const list = byCard.get(it.cardId);
+    if (!list || list.length < 2) continue;
+    const last = list[list.length - 1];
+    const prev = list[list.length - 2];
+    const latestUsd = pickPriceForFinish(
+      { latestUsd: last.priceUsd, latestUsdFoil: last.priceUsdFoil, latestUsdEtched: last.priceUsdEtched },
+      it.foil,
+    );
+    const previousUsd = pickPriceForFinish(
+      { latestUsd: prev.priceUsd, latestUsdFoil: prev.priceUsdFoil, latestUsdEtched: prev.priceUsdEtched },
+      it.foil,
+    );
+    const changePct = computePriceChangePct(latestUsd, previousUsd);
+    if (latestUsd == null) continue;
+    inputs.push({
+      cardId: it.cardId,
+      name: it.card.name,
+      setCode: it.card.setCode,
+      latestUsd,
+      changePct,
+    });
+  }
+  return pickTopMovers(inputs, 5);
+}
+
 export function computePriceChangePct(
   latest: number | null,
   previous: number | null,

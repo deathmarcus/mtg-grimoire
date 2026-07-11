@@ -4,9 +4,11 @@ import {
   pickTopMovers,
   aggregateValueByDate,
   filterValueHistoryByRange,
+  computeTopMovers,
   type SnapshotRow,
   type ValuedItem,
   type ValueHistoryPoint,
+  type TopMoverItem,
 } from "./dashboard";
 
 describe("computePriceChangePct", () => {
@@ -184,5 +186,95 @@ describe("filterValueHistoryByRange", () => {
 
   it("returns empty when no history within range", () => {
     expect(filterValueHistoryByRange([mk("2024-01-01", 1)], "1m", now)).toEqual([]);
+  });
+});
+
+describe("computeTopMovers", () => {
+  const day = (s: string) => new Date(`${s}T00:00:00Z`);
+
+  const mkItem = (
+    cardId: string,
+    foil: TopMoverItem["foil"],
+    name: string,
+    setCode: string,
+  ): TopMoverItem => ({ cardId, foil, card: { name, setCode } });
+
+  it("returns empty when items empty", () => {
+    expect(computeTopMovers([], [])).toEqual([]);
+  });
+
+  it("returns empty when snapshots empty", () => {
+    expect(
+      computeTopMovers([mkItem("card1", "NORMAL", "Card 1", "abc")], []),
+    ).toEqual([]);
+  });
+
+  it("computes deltas and orders by absolute change desc", () => {
+    const items = [
+      mkItem("card1", "NORMAL", "Riser", "abc"),
+      mkItem("card2", "NORMAL", "Faller", "def"),
+    ];
+    const snapshots: SnapshotRow[] = [
+      { cardId: "card1", snapshotDate: day("2026-04-01"), priceUsd: 10, priceUsdFoil: null, priceUsdEtched: null },
+      { cardId: "card1", snapshotDate: day("2026-04-08"), priceUsd: 12, priceUsdFoil: null, priceUsdEtched: null },
+      { cardId: "card2", snapshotDate: day("2026-04-01"), priceUsd: 20, priceUsdFoil: null, priceUsdEtched: null },
+      { cardId: "card2", snapshotDate: day("2026-04-08"), priceUsd: 15, priceUsdFoil: null, priceUsdEtched: null },
+    ];
+    const result = computeTopMovers(items, snapshots);
+    expect(result.map((m) => m.cardId)).toEqual(["card2", "card1"]);
+    expect(result[0].changePct).toBeCloseTo(-25, 5);
+    expect(result[1].changePct).toBeCloseTo(20, 5);
+    expect(result[0].latestUsd).toBe(15);
+    expect(result[0].name).toBe("Faller");
+    expect(result[0].setCode).toBe("def");
+  });
+
+  it("handles ties in absolute change by preserving relative order", () => {
+    const items = [
+      mkItem("card1", "NORMAL", "A", "s1"),
+      mkItem("card2", "NORMAL", "B", "s2"),
+    ];
+    const snapshots: SnapshotRow[] = [
+      { cardId: "card1", snapshotDate: day("2026-04-01"), priceUsd: 10, priceUsdFoil: null, priceUsdEtched: null },
+      { cardId: "card1", snapshotDate: day("2026-04-08"), priceUsd: 11, priceUsdFoil: null, priceUsdEtched: null },
+      { cardId: "card2", snapshotDate: day("2026-04-01"), priceUsd: 10, priceUsdFoil: null, priceUsdEtched: null },
+      { cardId: "card2", snapshotDate: day("2026-04-08"), priceUsd: 9, priceUsdFoil: null, priceUsdEtched: null },
+    ];
+    const result = computeTopMovers(items, snapshots);
+    expect(result.map((m) => m.cardId)).toEqual(["card1", "card2"]);
+  });
+
+  it("skips cards with only a single snapshot (no delta possible)", () => {
+    const items = [mkItem("card1", "NORMAL", "Solo", "abc")];
+    const snapshots: SnapshotRow[] = [
+      { cardId: "card1", snapshotDate: day("2026-04-01"), priceUsd: 10, priceUsdFoil: null, priceUsdEtched: null },
+    ];
+    expect(computeTopMovers(items, snapshots)).toEqual([]);
+  });
+
+  it("falls back to normal price for a foil card with no foil price in the snapshot", () => {
+    const items = [mkItem("card1", "FOIL", "Foily", "abc")];
+    const snapshots: SnapshotRow[] = [
+      { cardId: "card1", snapshotDate: day("2026-04-01"), priceUsd: 5, priceUsdFoil: null, priceUsdEtched: null },
+      { cardId: "card1", snapshotDate: day("2026-04-08"), priceUsd: 8, priceUsdFoil: null, priceUsdEtched: null },
+    ];
+    const result = computeTopMovers(items, snapshots);
+    expect(result).toEqual([
+      { cardId: "card1", name: "Foily", setCode: "abc", latestUsd: 8, changePct: 60 },
+    ]);
+  });
+
+  it("de-dupes by cardId, keeping only the first item row per card", () => {
+    const items = [
+      mkItem("card1", "NORMAL", "Dup", "abc"),
+      mkItem("card1", "FOIL", "Dup", "abc"),
+    ];
+    const snapshots: SnapshotRow[] = [
+      { cardId: "card1", snapshotDate: day("2026-04-01"), priceUsd: 10, priceUsdFoil: 20, priceUsdEtched: null },
+      { cardId: "card1", snapshotDate: day("2026-04-08"), priceUsd: 12, priceUsdFoil: 22, priceUsdEtched: null },
+    ];
+    const result = computeTopMovers(items, snapshots);
+    expect(result).toHaveLength(1);
+    expect(result[0].latestUsd).toBe(12);
   });
 });

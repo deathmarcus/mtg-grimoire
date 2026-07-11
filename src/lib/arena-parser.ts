@@ -8,6 +8,8 @@
  * Skips: empty lines, lines starting with "//", "Deck", "Sideboard".
  */
 
+import { parseDeckLine } from "./deck-line-parser";
+
 export type ArenaRow = {
   name: string;
   setCode: string;
@@ -15,10 +17,11 @@ export type ArenaRow = {
   quantity: number;
 };
 
-// Matches: <qty> <name> (<SET>) <collectorNumber>
-// SET: 3-4 alphanumeric characters (e.g. M11, MH21, TSR)
-// collectorNumber: one or more word characters (digits + optional trailing letters)
-const ARENA_LINE_RE = /^(\d+)\s+(.+?)\s+\(([A-Z0-9]{3,4})\)\s+(\S+)$/;
+// Arena set codes are 3-4 alphanumeric characters (e.g. M11, MH21, TSR).
+// This is stricter than the shared line format, which accepts any
+// non-")" text as the set group — so we validate on top of parseDeckLine
+// rather than loosen it for the other consumers.
+const ARENA_SET_RE = /^[A-Z0-9]{3,4}$/;
 
 export function parseArenaTxt(text: string): ArenaRow[] {
   const rows: ArenaRow[] = [];
@@ -32,14 +35,15 @@ export function parseArenaTxt(text: string): ArenaRow[] {
     if (trimmed.startsWith("//")) continue;
     if (trimmed === "Deck" || trimmed === "Sideboard") continue;
 
-    const m = trimmed.match(ARENA_LINE_RE);
-    if (!m) continue;
+    const parsed = parseDeckLine(trimmed);
+    if (!parsed) continue;
+    if (!ARENA_SET_RE.test(parsed.setCode)) continue;
 
     rows.push({
-      quantity: Number(m[1]),
-      name: m[2].trim(),
-      setCode: m[3],
-      collectorNumber: m[4],
+      quantity: parsed.quantity,
+      name: parsed.name,
+      setCode: parsed.setCode,
+      collectorNumber: parsed.collectorNumber,
     });
   }
 

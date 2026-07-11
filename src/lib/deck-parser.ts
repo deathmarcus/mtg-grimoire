@@ -1,3 +1,5 @@
+import { parseDeckLine } from "./deck-line-parser";
+
 export type DeckRow = {
   quantity: number;
   name: string;
@@ -6,8 +8,6 @@ export type DeckRow = {
 };
 
 type ParseResult = { rows: DeckRow[]; errors: string[] };
-
-const MOXFIELD_RE = /^(\d+)\s+(.+?)\s+\(([^)]+)\)\s+(\S+)$/;
 
 export function parseMoxfieldTxt(input: string): ParseResult {
   const rows: DeckRow[] = [];
@@ -18,17 +18,12 @@ export function parseMoxfieldTxt(input: string): ParseResult {
     const line = lines[i].trim();
     if (!line || line.startsWith("//")) continue;
 
-    const m = line.match(MOXFIELD_RE);
-    if (!m) {
+    const parsed = parseDeckLine(line);
+    if (!parsed) {
       errors.push(`Line ${i + 1}: could not parse "${line}"`);
       continue;
     }
-    rows.push({
-      quantity: Number(m[1]),
-      name: m[2],
-      setCode: m[3],
-      collectorNumber: m[4],
-    });
+    rows.push(parsed);
   }
 
   return { rows, errors };
