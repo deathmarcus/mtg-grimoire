@@ -13,7 +13,8 @@ export default auth((req) => {
     PUBLIC_PATHS.has(pathname) ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon");
+    pathname.startsWith("/favicon") ||
+    pathname.startsWith("/d/"); // public view-only deck pages (F8 / #21)
 
   if (isPublic) return NextResponse.next();
 

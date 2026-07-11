@@ -280,6 +280,11 @@ model Deck {
   description String?  @db.Text
   coverCardId String?  // nullable FK to Card; if null, use first mainboard card
 
+  // Public sharing (F8 / #21) — view-only /d/<slug>
+  isPublic    Boolean   @default(false)
+  slug        String?   @unique
+  publicSince DateTime? // set once on first activation; never reset by later toggles
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
