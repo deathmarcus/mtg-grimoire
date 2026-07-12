@@ -91,6 +91,9 @@ function StackCard({
           <span className="deck-stack-qty">{entry.quantity}×</span>
         )}
         <span className="deck-stack-name">{entry.card.name}</span>
+        {ownedInfo && (
+          <OwnedBadge owned={ownedInfo.ownedQty} needed={ownedInfo.neededQty} />
+        )}
         {isOutOfColor && (
           <span
             style={{
@@ -138,11 +141,6 @@ function StackCard({
 
       {/* Card image — hidden by default, expands downward on hover */}
       <div className="deck-stack-img" style={{ position: "relative" }}>
-        {ownedInfo && (
-          <span style={{ position: "absolute", top: 4, left: 4, zIndex: 2 }}>
-            <OwnedBadge owned={ownedInfo.ownedQty} needed={ownedInfo.neededQty} />
-          </span>
-        )}
         {entry.card.imageNormal ? (
           <Image
             src={entry.card.imageNormal}
