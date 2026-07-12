@@ -14,6 +14,9 @@ import type { Locale } from "@/lib/i18n";
 import { removeCardFromDeck, updateDeckCard } from "../actions";
 import type { ClientDeckCard } from "./types";
 import { CardEditModal } from "./CardEditModal";
+import { OwnedBadge } from "./OwnedBadge";
+
+type OwnedInfo = { ownedQty: number; neededQty: number };
 
 type Props = {
   deckId: string;
@@ -24,6 +27,7 @@ type Props = {
   commanderColors: Set<string>;
   initialPrefs: ScopedListPrefs;
   locale: Locale;
+  ownership: Record<string, OwnedInfo>;
 };
 
 /** ClientDeckCard already has `card` + `quantity` — this just adds the `price`
@@ -43,6 +47,7 @@ function StackCard({
   fxRate,
   isOutOfColor,
   onEdit,
+  ownedInfo,
 }: {
   deckId: string;
   entry: ClientDeckCard;
@@ -50,6 +55,7 @@ function StackCard({
   fxRate: number;
   isOutOfColor: boolean;
   onEdit: (entry: ClientDeckCard) => void;
+  ownedInfo?: OwnedInfo;
 }) {
   const [pending, startTransition] = useTransition();
 
@@ -131,7 +137,12 @@ function StackCard({
       </div>
 
       {/* Card image — hidden by default, expands downward on hover */}
-      <div className="deck-stack-img">
+      <div className="deck-stack-img" style={{ position: "relative" }}>
+        {ownedInfo && (
+          <span style={{ position: "absolute", top: 4, left: 4, zIndex: 2 }}>
+            <OwnedBadge owned={ownedInfo.ownedQty} needed={ownedInfo.neededQty} />
+          </span>
+        )}
         {entry.card.imageNormal ? (
           <Image
             src={entry.card.imageNormal}
@@ -160,11 +171,13 @@ function CommanderCard({
   entry,
   currency,
   fxRate,
+  ownedInfo,
 }: {
   deckId: string;
   entry: ClientDeckCard;
   currency: Currency;
   fxRate: number;
+  ownedInfo?: OwnedInfo;
 }) {
   const [pending, startTransition] = useTransition();
 
@@ -197,6 +210,11 @@ function CommanderCard({
           />
         ) : (
           <div style={{ position: "absolute", inset: 0, background: "var(--bg-3)" }} />
+        )}
+        {ownedInfo && (
+          <span style={{ position: "absolute", top: 4, left: 4, zIndex: 2 }}>
+            <OwnedBadge owned={ownedInfo.ownedQty} needed={ownedInfo.neededQty} />
+          </span>
         )}
       </div>
 
@@ -273,12 +291,14 @@ function TextRow({
   currency,
   fxRate,
   isOutOfColor,
+  ownedInfo,
 }: {
   deckId: string;
   entry: ClientDeckCard;
   currency: Currency;
   fxRate: number;
   isOutOfColor?: boolean;
+  ownedInfo?: OwnedInfo;
 }) {
   const [pending, startTransition] = useTransition();
 
@@ -342,6 +362,9 @@ function TextRow({
           {entry.card.name}
         </span>
       </CardHoverPreview>
+      {ownedInfo && (
+        <OwnedBadge owned={ownedInfo.ownedQty} needed={ownedInfo.neededQty} />
+      )}
       {isOutOfColor && (
         <span style={{ fontSize: 9, color: "var(--neg)" }} title="Outside commander color identity">
           ⚠
@@ -362,12 +385,14 @@ function GridTile({
   fxRate,
   isOutOfColor,
   onEdit,
+  ownedInfo,
 }: {
   entry: ClientDeckCard;
   currency: Currency;
   fxRate: number;
   isOutOfColor?: boolean;
   onEdit: (entry: ClientDeckCard) => void;
+  ownedInfo?: OwnedInfo;
 }) {
   const value = (entry.card.latestUsd ?? 0) * entry.quantity;
   return (
@@ -406,6 +431,11 @@ function GridTile({
             ⚠
           </span>
         )}
+        {ownedInfo && (
+          <span style={{ position: "absolute", bottom: 4, left: 4, zIndex: 2 }}>
+            <OwnedBadge owned={ownedInfo.ownedQty} needed={ownedInfo.neededQty} />
+          </span>
+        )}
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
         <span
@@ -438,6 +468,7 @@ export function MainboardTab({
   commanderColors,
   initialPrefs,
   locale,
+  ownership,
 }: Props) {
   const [editEntry, setEditEntry] = useState<ClientDeckCard | null>(null);
   const [prefs, setPrefs] = useState(initialPrefs);
@@ -455,6 +486,10 @@ export function MainboardTab({
   function isOutOfColor(card: ClientDeckCard) {
     if (commanderColors.size === 0) return false;
     return card.card.colorIdentity.some((col) => !commanderColors.has(col));
+  }
+
+  function ownedInfoFor(card: ClientDeckCard) {
+    return ownership[card.card.name.toLowerCase()];
   }
 
   return (
@@ -503,7 +538,14 @@ export function MainboardTab({
               <GroupSection label="Commander" count={commanderCards.reduce((s, c) => s + c.quantity, 0)}>
                 <div className="deck-visual-grid">
                   {commanderCards.map((c) => (
-                    <GridTile key={c.id} entry={c} currency={currency} fxRate={fxRate} onEdit={setEditEntry} />
+                    <GridTile
+                      key={c.id}
+                      entry={c}
+                      currency={currency}
+                      fxRate={fxRate}
+                      onEdit={setEditEntry}
+                      ownedInfo={ownedInfoFor(c)}
+                    />
                   ))}
                 </div>
               </GroupSection>
@@ -519,6 +561,7 @@ export function MainboardTab({
                       fxRate={fxRate}
                       isOutOfColor={isOutOfColor(c)}
                       onEdit={setEditEntry}
+                      ownedInfo={ownedInfoFor(c)}
                     />
                   ))}
                 </div>
@@ -530,7 +573,14 @@ export function MainboardTab({
             {commanderCards.length > 0 && (
               <GroupSection label="Commander" count={commanderCards.reduce((s, c) => s + c.quantity, 0)}>
                 {commanderCards.map((c) => (
-                  <TextRow key={c.id} deckId={deckId} entry={c} currency={currency} fxRate={fxRate} />
+                  <TextRow
+                    key={c.id}
+                    deckId={deckId}
+                    entry={c}
+                    currency={currency}
+                    fxRate={fxRate}
+                    ownedInfo={ownedInfoFor(c)}
+                  />
                 ))}
               </GroupSection>
             )}
@@ -544,6 +594,7 @@ export function MainboardTab({
                     currency={currency}
                     fxRate={fxRate}
                     isOutOfColor={isOutOfColor(c)}
+                    ownedInfo={ownedInfoFor(c)}
                   />
                 ))}
               </GroupSection>
@@ -565,6 +616,7 @@ export function MainboardTab({
                     entry={c}
                     currency={currency}
                     fxRate={fxRate}
+                    ownedInfo={ownedInfoFor(c)}
                   />
                 ))}
               </div>
@@ -588,6 +640,7 @@ export function MainboardTab({
                     fxRate={fxRate}
                     isOutOfColor={isOutOfColor(c)}
                     onEdit={setEditEntry}
+                    ownedInfo={ownedInfoFor(c)}
                   />
                 ))}
               </div>

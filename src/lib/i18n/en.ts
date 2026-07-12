@@ -188,6 +188,13 @@ const en: Record<string, string> = {
   "label.date": "Date",
   "label.file": "File",
   "label.name": "Name",
+
+  // Deck ownership (F11 #24)
+  "deck.owned.title": "You own",
+  "deck.owned.complete": "To complete",
+  "deck.owned.from": "from",
+  "deck.owned.yours": "yours",
+  "deck.search.ownedOnly": "My collection only",
 };
 
 export default en;

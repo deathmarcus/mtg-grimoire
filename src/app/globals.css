@@ -327,6 +327,19 @@ input, textarea, select { font-family: inherit; }
 .chip.neg { background: oklch(0.3 0.1 25 / 0.4); color: var(--neg); }
 .chip.warn { background: var(--accent-bg); color: var(--accent); }
 
+/* Owned badge — señal de posesión en filas de deck (F11 #24) */
+.owned-badge {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--r-sm);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.owned-badge.is-full { color: var(--pos); background: oklch(0.35 0.08 150 / 0.25); }
+.owned-badge.is-partial { color: var(--accent); background: var(--accent-bg); }
+.owned-badge.is-none { color: var(--neg); background: oklch(0.35 0.1 25 / 0.25); }
+
 /* =========================================================================
    Buttons
    ========================================================================= */

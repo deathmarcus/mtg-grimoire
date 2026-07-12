@@ -29,6 +29,7 @@ type Props = {
   fxRate: number;
   initialPrefs: ScopedListPrefs;
   locale: Locale;
+  ownership: Record<string, { ownedQty: number; neededQty: number }>;
 };
 
 export function DeckBuilder({
@@ -41,6 +42,7 @@ export function DeckBuilder({
   fxRate,
   initialPrefs,
   locale,
+  ownership,
 }: Props) {
   const mainRef = useRef<HTMLDivElement>(null);
   const curveRef = useRef<HTMLDivElement>(null);
@@ -133,6 +135,7 @@ export function DeckBuilder({
             commanderColors={commanderColors}
             initialPrefs={initialPrefs}
             locale={locale}
+            ownership={ownership}
           />
         </div>
 

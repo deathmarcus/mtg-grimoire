@@ -10,7 +10,10 @@ import { DeckBuilder } from "./DeckBuilder";
 import { DeleteDeckButton } from "./DeleteDeckButton";
 import { PublicShareToggle } from "./PublicShareToggle";
 import { ExportButtons } from "../../ExportButtons";
-import { type Locale } from "@/lib/i18n";
+import { type Locale, t } from "@/lib/i18n";
+import { computeDeckOwnership } from "@/lib/deck-ownership";
+import { getOwnedQuantitiesByName, getCheapestByName } from "@/lib/deck-ownership-data";
+import { SetProgressBar } from "@/components/SetProgressBar";
 
 type PageProps = { params: Promise<{ deckId: string }> };
 
@@ -70,6 +73,22 @@ export default async function DeckDetailPage({ params }: PageProps) {
 
   const mainCards = deck.cards.filter((c) => c.board === "MAIN");
   const sideCards = deck.cards.filter((c) => c.board === "SIDE");
+
+  // Ownership signal (F11 #24): two-pass so we only fetch the cheapest
+  // printing for cards that actually ended up missing.
+  const deckNames = [...new Set(mainCards.map((c) => c.card.name))];
+  const ownedByName = await getOwnedQuantitiesByName(user.id, deckNames);
+  const toOwnershipCards = () =>
+    mainCards.map((c) => ({
+      name: c.card.name,
+      quantity: c.quantity,
+      board: "MAIN" as const,
+      isCommander: c.isCommander,
+      priceUsd: toNumber(c.card.latestUsd),
+    }));
+  const prelim = computeDeckOwnership(toOwnershipCards(), ownedByName);
+  const cheapestByName = await getCheapestByName(prelim.missing.map((m) => m.name));
+  const ownership = computeDeckOwnership(toOwnershipCards(), ownedByName, cheapestByName);
 
   const totalCards = mainCards.reduce((s, c) => s + c.quantity, 0);
   const totalUsd = mainCards.reduce(
@@ -202,6 +221,35 @@ export default async function DeckDetailPage({ params }: PageProps) {
               </div>
             </div>
 
+            {ownership.totalNeeded > 0 && (
+              <div style={{ textAlign: "right", minWidth: 180 }}>
+                <div className="eyebrow">{t("deck.owned.title", locale)}</div>
+                <SetProgressBar
+                  owned={ownership.totalOwned}
+                  total={ownership.totalNeeded}
+                  pct={ownership.pct}
+                />
+                {ownership.missing.length > 0 && (
+                  <div
+                    style={{
+                      fontFamily: "var(--font-jetbrains-mono), monospace",
+                      fontSize: 11,
+                      color: "var(--ink-2)",
+                      marginTop: 2,
+                    }}
+                  >
+                    {t("deck.owned.complete", locale)}:{" "}
+                    {ownership.costIsApprox ? "≈" : ""}
+                    {formatMoney(ownership.costToComplete, currency, rate)}
+                    {" · "}
+                    {t("deck.owned.from", locale)}{" "}
+                    {ownership.costIsApprox ? "≈" : ""}
+                    {formatMoney(ownership.costToCompleteCheapest, currency, rate)}
+                  </div>
+                )}
+              </div>
+            )}
+
             <PublicShareToggle
               deckId={deckId}
               initialIsPublic={deck.isPublic}
@@ -223,6 +271,7 @@ export default async function DeckDetailPage({ params }: PageProps) {
           fxRate={rate}
           initialPrefs={initialPrefs}
           locale={locale}
+          ownership={ownership.perCard}
         />
       </div>
     </div>
