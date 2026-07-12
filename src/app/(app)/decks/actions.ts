@@ -313,6 +313,7 @@ export async function searchCardsForDeck(
       FROM "CollectionItem" ci
       JOIN "Card" c ON c.id = ci."cardId"
       WHERE ci."userId" = ${user.id}
+      ORDER BY c.name
     `);
     const ql = q.toLowerCase();
     const names = owned
