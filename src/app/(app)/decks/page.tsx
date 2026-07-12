@@ -3,6 +3,8 @@ import { requireUser } from "@/lib/session";
 import { formatMoney, getLatestUsdToMxn } from "@/lib/money";
 import { toNumber } from "@/lib/money-format";
 import { t, type Locale } from "@/lib/i18n";
+import { computeDeckOwnership } from "@/lib/deck-ownership";
+import { getOwnedQuantitiesByName } from "@/lib/deck-ownership-data";
 import { DecksClient } from "./DecksClient";
 
 export default async function DecksPage() {
@@ -34,6 +36,7 @@ export default async function DecksPage() {
           board: true,
           card: {
             select: {
+              name: true,
               latestUsd: true,
               imageNormal: true,
               colorIdentity: true,
@@ -43,6 +46,8 @@ export default async function DecksPage() {
       },
     },
   });
+
+  const ownedByName = await getOwnedQuantitiesByName(user.id);
 
   const deckStats = decks.map((deck) => {
     const totalCards = deck.cards.reduce((sum, c) => sum + c.quantity, 0);
@@ -59,6 +64,17 @@ export default async function DecksPage() {
       for (const col of c.card.colorIdentity) colorSet.add(col);
     }
 
+    const ownership = computeDeckOwnership(
+      deck.cards.map((c) => ({
+        name: c.card.name,
+        quantity: c.quantity,
+        board: "MAIN" as const,
+        isCommander: false,
+        priceUsd: null,
+      })),
+      ownedByName,
+    );
+
     return {
       id: deck.id,
       name: deck.name,
@@ -72,6 +88,7 @@ export default async function DecksPage() {
         month: "short",
         day: "numeric",
       }),
+      ownedPct: ownership.totalNeeded > 0 ? ownership.pct : null,
     };
   });
 
@@ -91,6 +108,7 @@ export default async function DecksPage() {
           decks={deckStats}
           emptyLabel={t("page.decks.empty", locale)}
           createFirstLabel={t("page.decks.createFirst", locale)}
+          ownedLabel={t("deck.owned.yours", locale)}
         />
       </div>
     </div>

@@ -9,7 +9,7 @@ import { TestHandModal } from "./TestHandModal";
 import { StatsTab } from "./StatsTab";
 import { InlineCardSearch } from "./InlineCardSearch";
 import type { ScopedListPrefs } from "@/lib/list-prefs";
-import type { Locale } from "@/lib/i18n";
+import { t, type Locale } from "@/lib/i18n";
 
 type Section = "main" | "curve" | "stats";
 
@@ -29,6 +29,7 @@ type Props = {
   fxRate: number;
   initialPrefs: ScopedListPrefs;
   locale: Locale;
+  ownership: Record<string, { ownedQty: number; neededQty: number }>;
 };
 
 export function DeckBuilder({
@@ -41,6 +42,7 @@ export function DeckBuilder({
   fxRate,
   initialPrefs,
   locale,
+  ownership,
 }: Props) {
   const mainRef = useRef<HTMLDivElement>(null);
   const curveRef = useRef<HTMLDivElement>(null);
@@ -87,7 +89,7 @@ export function DeckBuilder({
     <div className="panel">
       {/* Inline card search */}
       <div style={{ padding: "14px 20px 0" }}>
-        <InlineCardSearch deckId={deckId} />
+        <InlineCardSearch deckId={deckId} ownedOnlyLabel={t("deck.search.ownedOnly", locale)} />
       </div>
 
       {/* Nav bar */}
@@ -133,6 +135,7 @@ export function DeckBuilder({
             commanderColors={commanderColors}
             initialPrefs={initialPrefs}
             locale={locale}
+            ownership={ownership}
           />
         </div>
 

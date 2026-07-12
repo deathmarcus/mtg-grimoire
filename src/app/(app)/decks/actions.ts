@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { generateDeckSlug } from "@/lib/deck-slug";
@@ -294,13 +295,37 @@ export async function getPrintingsByName(name: string): Promise<PrintingResult[]
   }));
 }
 
-export async function searchCardsForDeck(query: string): Promise<CardSearchResult[]> {
-  await requireUser();
+export async function searchCardsForDeck(
+  query: string,
+  opts?: { ownedOnly?: boolean },
+): Promise<CardSearchResult[]> {
+  const user = await requireUser();
   const q = query.trim();
   if (q.length < 2) return [];
 
+  let where: Prisma.CardWhereInput = { name: { contains: q, mode: "insensitive" } };
+
+  if (opts?.ownedOnly) {
+    // Nombres únicos de la colección del usuario (pocos miles como mucho);
+    // el matching del término se hace en memoria para no duplicar el ILIKE.
+    const owned = await prisma.$queryRaw<Array<{ name: string }>>(Prisma.sql`
+      SELECT DISTINCT c.name
+      FROM "CollectionItem" ci
+      JOIN "Card" c ON c.id = ci."cardId"
+      WHERE ci."userId" = ${user.id}
+      ORDER BY c.name
+    `);
+    const ql = q.toLowerCase();
+    const names = owned
+      .map((o) => o.name)
+      .filter((n) => n.toLowerCase().includes(ql))
+      .slice(0, 100);
+    if (names.length === 0) return [];
+    where = { name: { in: names } };
+  }
+
   const cards = await prisma.card.findMany({
-    where: { name: { contains: q, mode: "insensitive" } },
+    where,
     orderBy: { name: "asc" },
     take: 12,
     select: {

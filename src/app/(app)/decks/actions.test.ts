@@ -9,7 +9,8 @@ const { mockPrisma, mockRequireUser } = vi.hoisted(() => ({
       delete: vi.fn(),
       update: vi.fn(),
     },
-    card: { findUnique: vi.fn() },
+    card: { findUnique: vi.fn(), findMany: vi.fn() },
+    $queryRaw: vi.fn(),
   },
   mockRequireUser: vi.fn(),
 }));
@@ -18,7 +19,7 @@ vi.mock("@/lib/session", () => ({ requireUser: mockRequireUser }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 
-import { removeCardFromDeck, updateDeckCard, setDeckPublic } from "./actions";
+import { removeCardFromDeck, updateDeckCard, setDeckPublic, searchCardsForDeck } from "./actions";
 
 function form(entries: Record<string, string>) {
   const fd = new FormData();
@@ -152,5 +153,39 @@ describe("setDeckPublic — ownership + slug generation", () => {
       where: { id: "deck-1" },
       data: { isPublic: false },
     });
+  });
+});
+
+describe("searchCardsForDeck ownedOnly", () => {
+  it("con ownedOnly restringe a nombres presentes en la colección del usuario", async () => {
+    mockPrisma.$queryRaw.mockResolvedValue([
+      { name: "Lightning Bolt" },
+      { name: "Sol Ring" },
+    ]);
+    mockPrisma.card.findMany.mockResolvedValue([]);
+    await searchCardsForDeck("bolt", { ownedOnly: true });
+    expect(mockPrisma.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(mockPrisma.card.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { name: { in: ["Lightning Bolt"] } },
+      }),
+    );
+  });
+
+  it("con ownedOnly y ningún nombre matcheando → [] sin query al catálogo", async () => {
+    mockPrisma.$queryRaw.mockResolvedValue([{ name: "Sol Ring" }]);
+    const r = await searchCardsForDeck("bolt", { ownedOnly: true });
+    expect(r).toEqual([]);
+    expect(mockPrisma.card.findMany).not.toHaveBeenCalled();
+  });
+
+  it("sin ownedOnly conserva el comportamiento actual (contains insensitive)", async () => {
+    mockPrisma.card.findMany.mockResolvedValue([]);
+    await searchCardsForDeck("bolt");
+    expect(mockPrisma.card.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { name: { contains: "bolt", mode: "insensitive" } },
+      }),
+    );
   });
 });
