@@ -9,7 +9,7 @@ import { TestHandModal } from "./TestHandModal";
 import { StatsTab } from "./StatsTab";
 import { InlineCardSearch } from "./InlineCardSearch";
 import type { ScopedListPrefs } from "@/lib/list-prefs";
-import type { Locale } from "@/lib/i18n";
+import { t, type Locale } from "@/lib/i18n";
 
 type Section = "main" | "curve" | "stats";
 
@@ -89,7 +89,7 @@ export function DeckBuilder({
     <div className="panel">
       {/* Inline card search */}
       <div style={{ padding: "14px 20px 0" }}>
-        <InlineCardSearch deckId={deckId} />
+        <InlineCardSearch deckId={deckId} ownedOnlyLabel={t("deck.search.ownedOnly", locale)} />
       </div>
 
       {/* Nav bar */}

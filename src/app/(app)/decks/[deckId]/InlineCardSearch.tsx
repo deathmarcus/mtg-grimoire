@@ -5,9 +5,9 @@ import Image from "next/image";
 import { searchCardsForDeck, addCardToDeck, type CardSearchResult } from "../actions";
 import { IconSearch, IconPlus } from "@/components/Icons";
 
-type Props = { deckId: string };
+type Props = { deckId: string; ownedOnlyLabel: string };
 
-export function InlineCardSearch({ deckId }: Props) {
+export function InlineCardSearch({ deckId, ownedOnlyLabel }: Props) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CardSearchResult[]>([]);
   const [open, setOpen] = useState(false);
@@ -15,6 +15,8 @@ export function InlineCardSearch({ deckId }: Props) {
   const [qty, setQty] = useState(1);
   const [board, setBoard] = useState<"MAIN" | "SIDE">("MAIN");
   const [added, setAdded] = useState(false);
+  const [ownedOnly, setOwnedOnly] = useState(false);
+  const ownedOnlyRef = useRef(false);
 
   const [isSearching, startSearch] = useTransition();
   const [isAdding, startAdd] = useTransition();
@@ -42,11 +44,18 @@ export function InlineCardSearch({ deckId }: Props) {
 
     debounceRef.current = setTimeout(() => {
       startSearch(async () => {
-        const r = await searchCardsForDeck(q);
+        const r = await searchCardsForDeck(q, { ownedOnly: ownedOnlyRef.current });
         setResults(r);
         setOpen(r.length > 0);
       });
     }, 220);
+  }
+
+  function toggleOwnedOnly() {
+    const next = !ownedOnly;
+    setOwnedOnly(next);
+    ownedOnlyRef.current = next;
+    if (query.trim().length >= 2) handleQueryChange(query);
   }
 
   function handleSelect(card: CardSearchResult) {
@@ -117,6 +126,18 @@ export function InlineCardSearch({ deckId }: Props) {
             </span>
           )}
         </div>
+
+        <label
+          style={{
+            display: "flex", alignItems: "center", gap: 5,
+            fontFamily: "var(--font-jetbrains-mono), monospace",
+            fontSize: 10, color: ownedOnly ? "var(--accent)" : "var(--ink-2)",
+            cursor: "pointer", whiteSpace: "nowrap",
+          }}
+        >
+          <input type="checkbox" checked={ownedOnly} onChange={toggleOwnedOnly} />
+          {ownedOnlyLabel}
+        </label>
 
         {/* Board selector */}
         {selected && (
