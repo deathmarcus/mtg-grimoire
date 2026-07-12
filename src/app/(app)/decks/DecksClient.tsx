@@ -15,15 +15,17 @@ export type DeckStat = {
   coverImage: string | null;
   colors: string[];
   updatedAt: string;
+  ownedPct: number | null;
 };
 
 type Props = {
   decks: DeckStat[];
   emptyLabel: string;
   createFirstLabel: string;
+  ownedLabel: string;
 };
 
-export function DecksClient({ decks, emptyLabel, createFirstLabel }: Props) {
+export function DecksClient({ decks, emptyLabel, createFirstLabel, ownedLabel }: Props) {
   const [view, setView] = useState<"grid" | "list">("grid");
 
   return (
@@ -114,7 +116,7 @@ export function DecksClient({ decks, emptyLabel, createFirstLabel }: Props) {
           </div>
         </div>
       ) : view === "list" ? (
-        <DeckListView decks={decks} />
+        <DeckListView decks={decks} ownedLabel={ownedLabel} />
       ) : (
         /* Grid view */
         <div
@@ -258,6 +260,47 @@ export function DecksClient({ decks, emptyLabel, createFirstLabel }: Props) {
                     </div>
                   </div>
                 </div>
+
+                {deck.ownedPct !== null && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "0 16px 12px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: 60,
+                        height: 4,
+                        background: "var(--bg-3)",
+                        borderRadius: 2,
+                        overflow: "hidden",
+                      }}
+                      aria-hidden="true"
+                    >
+                      <span
+                        style={{
+                          display: "block",
+                          height: 4,
+                          width: `${deck.ownedPct}%`,
+                          background: "var(--accent)",
+                        }}
+                      />
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: "var(--font-jetbrains-mono), monospace",
+                        fontSize: 10,
+                        color: "var(--accent)",
+                      }}
+                    >
+                      {deck.ownedPct}% {ownedLabel}
+                    </span>
+                  </div>
+                )}
               </div>
             </Link>
           ))}

@@ -1,7 +1,13 @@
 import Link from "next/link";
 import type { DeckStat } from "./DecksClient";
 
-export function DeckListView({ decks }: { decks: DeckStat[] }) {
+export function DeckListView({
+  decks,
+  ownedLabel,
+}: {
+  decks: DeckStat[];
+  ownedLabel: string;
+}) {
   return (
     <div className="panel">
       <table className="tbl" style={{ width: "100%" }}>
@@ -10,6 +16,7 @@ export function DeckListView({ decks }: { decks: DeckStat[] }) {
             <th>Name</th>
             <th>Colors</th>
             <th>Format</th>
+            <th className="num">{`% ${ownedLabel}`}</th>
             <th className="num">Updated</th>
           </tr>
         </thead>
@@ -50,6 +57,9 @@ export function DeckListView({ decks }: { decks: DeckStat[] }) {
                 ) : (
                   <span style={{ color: "var(--ink-3)" }}>—</span>
                 )}
+              </td>
+              <td className="num">
+                {deck.ownedPct !== null ? `${deck.ownedPct}%` : "—"}
               </td>
               <td className="num">
                 <span
